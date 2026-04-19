@@ -156,6 +156,17 @@
         }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
         .status-pulse { animation: pulse 2s infinite; }
+
+        /* Dev Modal List Style */
+        .dev-feature-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px;
+            background: #f8fafc;
+            border-radius: 16px;
+            margin-bottom: 8px;
+        }
     </style>
 </head>
 <body>
@@ -285,7 +296,8 @@
                 <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
                 <p class="text-[9px] font-black uppercase">Rekap</p>
             </button>
-            <button onclick="safeNavigate('chat.html')" id="nav-chat" class="nav-item">
+            <!-- Aksi Chat diubah ke Pop-up Pengembangan -->
+            <button onclick="showDevModal()" id="nav-chat" class="nav-item">
                 <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
                 <p class="text-[9px] font-black uppercase">Chat</p>
             </button>
@@ -309,6 +321,44 @@
             <div class="absolute inset-0 border-[40px] border-black/40 pointer-events-none flex items-center justify-center">
                 <div class="w-full h-full border-2 border-teal-400 rounded-2xl shadow-[0_0_0_999px_rgba(0,0,0,0.4)]"></div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: PENGEMBANGAN FITUR CHAT -->
+<div id="modal-dev" class="modal-overlay" onclick="if(event.target === this) closeDevModal()">
+    <div class="modal-card">
+        <div class="p-8 text-center">
+            <div class="w-20 h-20 bg-teal-50 text-teal-600 rounded-3xl flex items-center justify-center text-4xl mb-6 mx-auto">🚀</div>
+            <h3 class="font-black text-slate-800 text-lg uppercase mb-2 tracking-tight">Sistem Koordinasi Digital</h3>
+            <p class="text-xs font-bold text-slate-400 mb-8 leading-relaxed uppercase tracking-wider">Fitur ini sedang dalam tahap pengembangan intensif untuk meningkatkan efisiensi rekan medis.</p>
+            
+            <div class="text-left space-y-3 mb-10">
+                <p class="text-[9px] font-black text-teal-600 uppercase tracking-widest ml-1">Fitur Mendatang:</p>
+                <div class="dev-feature-item">
+                    <span class="text-lg">💬</span>
+                    <div>
+                        <p class="text-[10px] font-black text-slate-700 uppercase">Chat Real-Time</p>
+                        <p class="text-[9px] font-medium text-slate-400 uppercase">Koordinasi antar shift tanpa hambatan.</p>
+                    </div>
+                </div>
+                <div class="dev-feature-item">
+                    <span class="text-lg">📌</span>
+                    <div>
+                        <p class="text-[10px] font-black text-slate-700 uppercase">Laporan Sematan</p>
+                        <p class="text-[9px] font-medium text-slate-400 uppercase">Informasi pasien kritis selalu di bagian atas.</p>
+                    </div>
+                </div>
+                <div class="dev-feature-item">
+                    <span class="text-lg">💊</span>
+                    <div>
+                        <p class="text-[10px] font-black text-slate-700 uppercase">Log Obat Digital</p>
+                        <p class="text-[9px] font-medium text-slate-400 uppercase">Pengingat jam pemberian obat pasien.</p>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="closeDevModal()" class="w-full bg-slate-900 text-white py-5 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl active:scale-95 transition-all">Tunggu Pembaruan</button>
         </div>
     </div>
 </div>
@@ -337,6 +387,17 @@
         } catch (e) { window.location.assign(url); }
     }
 
+    // --- LOGIKA MODAL DEV ---
+    function showDevModal() {
+        const modal = document.getElementById('modal-dev');
+        if (modal) modal.style.display = 'flex';
+    }
+
+    function closeDevModal() {
+        const modal = document.getElementById('modal-dev');
+        if (modal) modal.style.display = 'none';
+    }
+
     // --- LOGIKA GPS ---
     function getDistance(lat1, lon1, lat2, lon2) {
         const R = 6371e3; 
@@ -355,7 +416,6 @@
         const indicator = document.getElementById('gps-indicator');
         const cfg = state.data.config || {};
         
-        // JIKA GPS LOCK DIAKTIFKAN (gpsLock === true)
         if (cfg.gpsLock === true) {
             if (indicator) indicator.classList.remove('hidden');
 
@@ -365,7 +425,6 @@
             }
 
             navigator.geolocation.getCurrentPosition((pos) => {
-                // Koordinat target dari admin
                 const targetLat = parseFloat(cfg.lat) || -2.6789;
                 const targetLng = parseFloat(cfg.lng) || 116.1234;
                 const allowedRad = parseInt(cfg.radius) || 100;
@@ -388,7 +447,6 @@
                 updateGPSUI("ERROR", "GPS Terkunci");
             }, { enableHighAccuracy: true });
         } else {
-            // JIKA GPS LOCK DIMATIKAN (OFF)
             state.isWithinRadius = true;
             if (indicator) indicator.classList.add('hidden');
         }
@@ -612,7 +670,6 @@
     async function openScan() {
         if(!state.user) return showAlert("Akses Ditolak", "Login sebagai perawat.", "error");
         
-        // VALIDASI GPS HANYA JIKA AKTIF DI CONFIG
         if (state.data.config && state.data.config.gpsLock === true) {
             updateGPS();
             if (!state.isWithinRadius) {
