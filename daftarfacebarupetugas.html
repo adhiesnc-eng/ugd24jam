@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Registrasi Wajah - Puskesmas Sampanahan</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: #0f172a;
+            --accent: #0d9488;
+        }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+        
+        #face-preview-container {
+            width: 100%;
+            max-width: 400px;
+            aspect-ratio: 1;
+            background: #000;
+            border-radius: 40px;
+            overflow: hidden;
+            position: relative;
+            border: 6px solid white;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        #face-video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+        .face-overlay { 
+            position: absolute; inset: 0; border: 3px dashed rgba(255,255,255,0.5); 
+            border-radius: 50%; margin: 12%; pointer-events: none; 
+            box-shadow: 0 0 0 999px rgba(15, 23, 42, 0.4);
+        }
+
+        .step-card {
+            display: none;
+            animation: slideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .step-card.active { display: block; }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+        .toast { 
+            pointer-events: auto; background: white; border-radius: 20px; padding: 18px 24px; 
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); border-left: 6px solid var(--accent); 
+            display: flex; align-items: center; gap: 14px; min-width: 300px; transform: translateX(120%); transition: 0.5s;
+        }
+        .toast.show { transform: translateX(0); }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen flex flex-col items-center p-6">
+
+<div id="toast-container"></div>
+
+<!-- LOADING -->
+<div id="loading" class="hidden fixed inset-0 bg-white/90 backdrop-blur-sm z-[3000] flex flex-col items-center justify-center text-center">
+    <div class="w-16 h-16 border-4 border-teal-100 border-t-teal-600 rounded-full animate-spin"></div>
+    <p class="mt-4 font-bold text-slate-800 uppercase tracking-widest text-[10px]">Memproses Cloud...</p>
+</div>
+
+<!-- HEADER -->
+<header class="w-full max-w-md text-center mb-10 mt-6">
+    <div class="w-20 h-20 bg-teal-600 rounded-[28px] flex items-center justify-center text-3xl shadow-xl shadow-teal-200 mx-auto mb-6">🤳</div>
+    <h1 class="text-2xl font-black text-slate-900 tracking-tighter uppercase">Registrasi Wajah</h1>
+    <p class="text-[10px] font-bold text-slate-400 tracking-[0.3em] uppercase mt-2">Tenaga Medis Puskesmas</p>
+</header>
+
+<main class="w-full max-w-md">
+    
+    <!-- STEP 1: PILIH PETUGAS -->
+    <div id="step-1" class="step-card active space-y-6">
+        <div class="bg-white p-8 rounded-[40px] shadow-sm border border-slate-100">
+            <label class="block font-black text-[11px] uppercase text-slate-400 mb-4 tracking-widest text-center">Pilih Nama Anda</label>
+            <select id="nurse-select" class="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-teal-500 font-bold text-slate-700 transition-all appearance-none text-center uppercase cursor-pointer">
+                <option value="">-- DAFTAR PETUGAS --</option>
+            </select>
+            <div class="mt-8 flex items-start gap-4 p-5 bg-teal-50 rounded-3xl border border-teal-100">
+                <span class="text-xl">ℹ️</span>
+                <p class="text-[10px] text-teal-800 font-bold uppercase leading-relaxed">Pendaftaran wajah hanya dilakukan satu kali. Pastikan nama yang dipilih benar.</p>
+            </div>
+        </div>
+        <button onclick="goToStep2()" class="w-full bg-slate-950 text-white py-8 rounded-[36px] font-black text-xs uppercase shadow-2xl active:scale-95 transition-all">Lanjutkan Ke Kamera</button>
+    </div>
+
+    <!-- STEP 2: AMBIL FOTO -->
+    <div id="step-2" class="step-card space-y-8 flex flex-col items-center">
+        <div id="face-preview-container">
+            <video id="face-video" autoplay playsinline muted></video>
+            <div class="face-overlay"></div>
+            <canvas id="face-canvas" class="hidden"></canvas>
+        </div>
+
+        <div class="w-full space-y-4">
+            <div class="text-center mb-4">
+                <h3 id="display-name" class="font-black text-teal-600 uppercase tracking-tighter text-xl">NAMA PETUGAS</h3>
+                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Posisikan wajah di dalam lingkaran</p>
+            </div>
+            
+            <button onclick="captureAndUpload()" class="w-full bg-teal-600 text-white py-8 rounded-[36px] font-black text-xs uppercase shadow-2xl shadow-teal-200 active:scale-95 transition-all">Ambil & Daftar Wajah</button>
+            <button onclick="goToStep1()" class="w-full bg-white text-slate-400 py-4 font-bold text-[10px] uppercase tracking-widest hover:text-rose-500 transition-colors">Kembali Ganti Nama</button>
+        </div>
+    </div>
+
+    <!-- STEP 3: SUKSES -->
+    <div id="step-3" class="step-card space-y-10 text-center">
+        <div class="bg-white p-12 rounded-[50px] shadow-sm border border-slate-100">
+            <div class="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-5xl mx-auto mb-8 animate-bounce">✓</div>
+            <h2 class="text-2xl font-black text-slate-900 uppercase tracking-tighter">Berhasil Terdaftar!</h2>
+            <p class="text-slate-400 text-[11px] font-bold mt-4 leading-relaxed uppercase tracking-wider">Terima kasih, data wajah Anda telah disinkronkan ke Cloud. Anda sekarang dapat menggunakan Face ID untuk presensi.</p>
+        </div>
+        <button onclick="location.reload()" class="w-full bg-slate-950 text-white py-8 rounded-[36px] font-black text-xs uppercase shadow-2xl">Selesai</button>
+    </div>
+
+</main>
+
+<footer class="mt-16 text-center">
+    <p class="text-[9px] text-slate-300 font-bold uppercase tracking-[0.4em]">Puskesmas Sampanahan &copy; 2024</p>
+</footer>
+
+<script>
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw-Fl_qSNgqr9oEnn3vUmCtN4bRCZ5M7wz5YMiofUD33pN-kICuL6zubelKVcI_k2luXg/exec";
+    
+    let currentDb = { officers: [], faceData: {}, config: {} };
+    let cameraStream = null;
+
+    // --- UI HELPERS ---
+    function showLoading(s) { document.getElementById('loading').classList.toggle('hidden', !s); }
+    
+    function showToast(msg, type = 'success') {
+        const container = document.getElementById('toast-container');
+        const t = document.createElement('div');
+        t.className = `toast show`;
+        t.innerHTML = `<span>${type === 'error' ? '❌' : '✅'}</span> <span class="font-bold text-[11px] uppercase tracking-wider">${msg}</span>`;
+        container.appendChild(t);
+        setTimeout(() => { t.remove(); }, 4000);
+    }
+
+    function switchStep(step) {
+        document.querySelectorAll('.step-card').forEach(s => s.classList.remove('active'));
+        document.getElementById(`step-${step}`).classList.add('active');
+        window.scrollTo(0,0);
+    }
+
+    // --- LOGIC ---
+    async function init() {
+        showLoading(true);
+        try {
+            const r = await fetch(`${WEB_APP_URL}?action=getData&t=${Date.now()}`);
+            const d = await r.json();
+            currentDb = d;
+            
+            const select = document.getElementById('nurse-select');
+            // Urutkan nama dan tampilkan yang belum punya wajah lebih dulu (opsional)
+            d.officers.sort().forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name;
+                const hasFace = d.faceData && d.faceData[name];
+                opt.innerText = name + (hasFace ? " (SUDAH ADA WAJAH)" : " (BELUM ADA WAJAH)");
+                select.appendChild(opt);
+            });
+        } catch (e) {
+            showToast("Gagal memuat data petugas.", "error");
+        } finally {
+            showLoading(false);
+        }
+    }
+
+    async function goToStep2() {
+        const name = document.getElementById('nurse-select').value;
+        if (!name) return showToast("Silakan pilih nama Anda!", "error");
+
+        document.getElementById('display-name').innerText = name;
+        
+        try {
+            cameraStream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: "user", width: 640, height: 640 } 
+            });
+            document.getElementById('face-video').srcObject = cameraStream;
+            switchStep(2);
+        } catch (e) {
+            showToast("Akses kamera ditolak atau tidak ditemukan.", "error");
+        }
+    }
+
+    function goToStep1() {
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+            cameraStream = null;
+        }
+        switchStep(1);
+    }
+
+    async function captureAndUpload() {
+        const video = document.getElementById('face-video');
+        const canvas = document.getElementById('face-canvas');
+        const name = document.getElementById('nurse-select').value;
+        const ctx = canvas.getContext('2d');
+
+        showLoading(true);
+        
+        // Setup Canvas
+        canvas.width = 400;
+        canvas.height = 400;
+        const size = Math.min(video.videoWidth, video.videoHeight);
+        const x = (video.videoWidth - size) / 2;
+        const y = (video.videoHeight - size) / 2;
+        
+        // Gambar ke canvas (crop tengah)
+        ctx.drawImage(video, x, y, size, size, 0, 0, 400, 400);
+        
+        // Konversi ke Base64 (Kualitas 0.5 untuk menghemat kuota properties script)
+        const faceBase64 = canvas.toDataURL('image/jpeg', 0.5);
+
+        // Update data lokal
+        if (!currentDb.faceData) currentDb.faceData = {};
+        currentDb.faceData[name] = faceBase64;
+
+        try {
+            const resp = await fetch(WEB_APP_URL, {
+                method: "POST",
+                body: JSON.stringify({ 
+                    action: 'updateFullConfig', 
+                    payload: { 
+                        config: currentDb.config, 
+                        officers: currentDb.officers, 
+                        schedule: currentDb.schedule,
+                        faceData: currentDb.faceData 
+                    } 
+                })
+            });
+            const result = await resp.json();
+            
+            if(result.status === 'success') {
+                if (cameraStream) cameraStream.getTracks().forEach(t => t.stop());
+                switchStep(3);
+            } else {
+                throw new Error("Gagal menyimpan.");
+            }
+        } catch(e) {
+            showToast("Gagal mengunggah wajah. Coba lagi.", "error");
+        } finally {
+            showLoading(false);
+        }
+    }
+
+    window.onload = init;
+</script>
+</body>
+</html>
