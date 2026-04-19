@@ -1,18 +1,16 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="antialiased">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Sistem Presensi Perawat - Puskesmas Sampanahan</title>
     
-    <!-- PWA Meta Tags -->
-    <meta name="theme-color" content="#0d9488" id="meta-theme-color">
-    <meta name="mobile-web-app-capable" content="yes">
+    <!-- PWA & Mobile Optimization -->
+    <meta name="theme-color" content="#0d9488">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Nurse Presence">
     
-    <!-- External Resources -->
+    <!-- External Assets -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/html5-qrcode"></script>
@@ -22,698 +20,599 @@
         :root {
             --primary: #0d9488;
             --primary-dark: #0f766e;
-            --primary-light: #f0fdfa;
+            --secondary: #6366f1;
             --accent: #f43f5e;
-            --bg: #f8fafc;
+            --bg-soft: #f8fafc;
         }
 
-        * { 
-            box-sizing: border-box; 
-            -webkit-tap-highlight-color: transparent; 
-            font-family: 'Plus Jakarta Sans', sans-serif;
-        }
-        
         body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
             background-color: #f1f5f9;
             height: 100dvh;
             margin: 0;
             display: flex;
             justify-content: center;
             overflow: hidden;
+            -webkit-user-select: none;
+            user-select: none;
         }
 
+        /* App Shell */
         .app-container { 
             width: 100%;
-            max-width: 500px; 
-            background: white; 
+            max-width: 480px; 
+            background: #ffffff; 
             height: 100dvh; 
             position: relative; 
             display: flex; 
             flex-direction: column;
-            box-shadow: 0 0 50px rgba(0,0,0,0.1);
+            box-shadow: 0 0 40px rgba(0,0,0,0.05);
         }
 
-        .scrollable-content {
+        /* Smooth Scrolling */
+        .main-scroll {
             flex: 1; 
             overflow-y: auto; 
-            scrollbar-width: none;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 120px;
         }
-        .scrollable-content::-webkit-scrollbar { display: none; }
+        .main-scroll::-webkit-scrollbar { display: none; }
 
-        .view-content { display: none; height: 100%; }
-        .view-content.active { display: block; animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        /* View Transitions */
+        .view-section { display: none; }
+        .view-section.active { 
+            display: block; 
+            animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); 
+        }
         
-        @keyframes fadeIn { 
-            from { opacity: 0; transform: translateY(10px); } 
+        @keyframes slideUp { 
+            from { opacity: 0; transform: translateY(20px); } 
             to { opacity: 1; transform: translateY(0); } 
         }
 
-        .rekap-wrapper { 
-            width: 100%; 
+        .btn-press { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .btn-press:active { transform: scale(0.95); opacity: 0.8; }
+
+        /* Table Styling */
+        .table-wrapper { 
             overflow-x: auto; 
-            border-radius: 20px; 
-            background: white; 
-            border: 1px solid #e2e8f0; 
+            border-radius: 1.5rem; 
+            border: 1px solid #e2e8f0;
         }
-        .editor-table { border-collapse: collapse; min-width: 800px; font-size: 11px; }
-        .editor-table th, .editor-table td { border: 1px solid #f1f5f9; text-align: center; padding: 12px 8px; }
-        .editor-table th { background: #f8fafc; font-weight: 800; color: #64748b; text-transform: uppercase; font-size: 9px; }
+        .rekap-table { width: 100%; border-collapse: collapse; font-size: 0.7rem; }
+        .rekap-table th { 
+            background: #f8fafc; 
+            padding: 10px; 
+            text-align: center; 
+            font-weight: 800; 
+            color: #64748b; 
+            text-transform: uppercase;
+        }
+        .rekap-table td { 
+            padding: 10px 6px; 
+            text-align: center; 
+            border-top: 1px solid #f1f5f9; 
+            font-weight: 600;
+        }
+        .sticky-left { position: sticky; left: 0; background: white; z-index: 10; border-right: 1px solid #f1f5f9; min-width: 100px; text-align: left !important; padding-left: 12px !important; }
         
-        .sticky-col { 
-            position: sticky; left: 0; background: white !important; z-index: 10; 
-            min-width: 130px; text-align: left !important; padding-left: 16px !important; 
-            border-right: 2px solid #f1f5f9 !important; font-weight: 700; color: #1e293b;
-        }
+        /* Presence Codes */
+        .code-P { color: #0d9488; background: #f0fdfa; border-radius: 4px; }
+        .code-S { color: #d97706; background: #fffbeb; border-radius: 4px; }
+        .code-M { color: #2563eb; background: #eff6ff; border-radius: 4px; }
 
-        .sticky-col-right {
-            position: sticky; right: 0; background: #f0fdfa !important; z-index: 10;
-            min-width: 60px; border-left: 3px double #0d9488 !important;
-            font-weight: 800; color: #0d9488;
-            box-shadow: -5px 0 15px rgba(0,0,0,0.02);
+        /* Modals */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px); z-index: 1000;
+            display: none; align-items: flex-end; justify-content: center;
         }
-        thead th.sticky-col-right { background: #e6fffa !important; }
+        .modal-sheet {
+            background: white; width: 100%; max-width: 480px;
+            border-radius: 2rem 2rem 0 0; padding-bottom: env(safe-area-inset-bottom);
+            animation: sheetUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
-        .cell-P { background-color: #ccfbf1 !important; color: #0d9488 !important; }
-        .cell-S { background-color: #fef3c7 !important; color: #d97706 !important; }
-        .cell-M { background-color: #dbeafe !important; color: #2563eb !important; }
-
-        .dashboard-nav {
-            background: white; border-top: 1px solid #f1f5f9;
-            padding: 12px 16px; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-            display: flex; flex-direction: column; gap: 12px; 
-            box-shadow: 0 -10px 30px rgba(0,0,0,0.05); z-index: 100; border-radius: 30px 30px 0 0;
+        /* Custom Alert */
+        #alert-box {
+            position: fixed; top: 2rem; left: 50%; transform: translateX(-50%) translateY(-150%);
+            width: 90%; max-width: 400px; z-index: 2000; transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
         }
-        .nav-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-        .nav-item {
-            display: flex; flex-direction: column; align-items: center; gap: 4px;
-            padding: 8px; border-radius: 16px; color: #94a3b8; transition: 0.3s;
-        }
-        .nav-item.active { background: var(--primary-light); color: var(--primary); }
-
-        .btn-primary {
-            background: var(--primary); color: white;
-            padding: 16px; border-radius: 18px; font-weight: 800;
-            display: flex; align-items: center; justify-content: center; gap: 10px;
-            transition: 0.2s; box-shadow: 0 10px 20px rgba(13, 148, 136, 0.2);
-        }
-        .btn-primary:active { transform: scale(0.97); }
-
-        .modal-overlay { 
-            position: fixed; inset: 0; background: rgba(15, 23, 42, 0.8); 
-            backdrop-filter: blur(8px); z-index: 1000; 
-            display: none; align-items: center; justify-content: center; padding: 20px;
-        }
-        .modal-card { 
-            background: white; width: 100%; max-width: 400px; border-radius: 28px; 
-            overflow: hidden; animation: modalSlide 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        @keyframes modalSlide { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-
-        #custom-alert {
-            position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-100px);
-            width: 90%; max-width: 380px; background: white; z-index: 2000;
-            padding: 16px; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.15);
-            display: flex; align-items: center; gap: 12px; transition: 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28);
-            opacity: 0;
-        }
-        #custom-alert.show { transform: translateX(-50%) translateY(0); opacity: 1; }
-
-        .accordion-content {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.4s ease-out, opacity 0.3s ease;
-            opacity: 0;
-        }
-        .accordion-content.open {
-            max-height: 800px;
-            opacity: 1;
-        }
-        .arrow-icon {
-            transition: transform 0.3s ease;
-        }
-        .arrow-icon.rotated {
-            transform: rotate(180deg);
-        }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
-        .status-pulse { animation: pulse 2s infinite; }
-
-        /* Dev Modal List Style */
-        .dev-feature-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-            padding: 12px;
-            background: #f8fafc;
-            border-radius: 16px;
-            margin-bottom: 8px;
-        }
+        #alert-box.show { transform: translateX(-50%) translateY(0); }
     </style>
 </head>
 <body>
 
-<div id="custom-alert">
-    <div id="alert-icon" class="w-10 h-10 rounded-full flex items-center justify-center text-xl bg-teal-50 text-teal-600">✓</div>
-    <div class="flex-1">
-        <p id="alert-title" class="text-xs font-extrabold uppercase text-slate-800 tracking-tight">Sukses</p>
-        <p id="alert-msg" class="text-[10px] font-bold text-slate-500 leading-tight"></p>
+<!-- ALERT SYSTEM -->
+<div id="alert-box">
+    <div id="alert-content" class="bg-white rounded-2xl p-4 shadow-2xl flex items-center gap-4 border border-slate-100">
+        <div id="alert-icon-bg" class="w-12 h-12 rounded-full flex items-center justify-center text-xl">✓</div>
+        <div class="flex-1">
+            <h4 id="alert-title" class="text-xs font-extrabold uppercase tracking-widest text-slate-900">Notifikasi</h4>
+            <p id="alert-msg" class="text-[10px] font-bold text-slate-500 mt-0.5"></p>
+        </div>
     </div>
 </div>
 
-<div id="loading-overlay" class="hidden fixed inset-0 bg-white/60 backdrop-blur-sm z-[3000] flex flex-col items-center justify-center">
-    <div class="w-12 h-12 border-4 border-teal-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-    <p class="text-[10px] font-black uppercase tracking-[0.2em] text-teal-800">Menyinkronkan...</p>
+<!-- GLOBAL LOADING -->
+<div id="loading-screen" class="hidden fixed inset-0 bg-white/80 backdrop-blur-md z-[3000] flex flex-col items-center justify-center">
+    <div class="relative">
+        <div class="w-16 h-16 border-4 border-teal-100 rounded-full"></div>
+        <div class="w-16 h-16 border-4 border-teal-600 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
+    </div>
+    <p class="mt-6 text-[10px] font-black uppercase tracking-[0.3em] text-teal-800 animate-pulse">Sinkronisasi Data...</p>
 </div>
 
 <div class="app-container">
-    <div class="scrollable-content" id="main-scroll">
-        
-        <!-- VIEW: HOME -->
-        <div id="view-home" class="view-content active">
-            <div class="bg-teal-600 p-6 pt-12 pb-14 rounded-b-[40px] text-white relative shadow-xl overflow-hidden" style="background: linear-gradient(135deg, #0d9488 0%, #065f46 100%);">
-                <div class="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
-                <div class="flex justify-between items-start relative z-10">
-                    <div>
-                        <p class="text-[9px] font-black opacity-80 uppercase tracking-[0.2em]">Puskesmas Sampanahan</p>
-                        <h2 id="display-name" class="text-2xl font-extrabold mt-1 text-white">Halo, Rekan Medis</h2>
-                    </div>
-                    <div class="text-right">
-                        <h1 id="clock" class="text-2xl font-black tabular-nums">00:00</h1>
-                        <p id="date-label" class="text-[9px] font-bold opacity-80 uppercase mt-1">---</p>
+    <div class="main-scroll" id="scroll-root">
+        <header id="app-header" class="relative bg-teal-600 pt-14 pb-16 px-6 overflow-hidden">
+            <div class="absolute top-0 right-0 w-64 h-64 bg-teal-500/30 rounded-full -mr-20 -mt-20 blur-3xl"></div>
+            <div class="absolute bottom-0 left-0 w-40 h-40 bg-teal-700/30 rounded-full -ml-10 -mb-10 blur-2xl"></div>
+            <div class="relative z-10 flex justify-between items-start">
+                <div>
+                    <span class="bg-white/20 text-white text-[8px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full backdrop-blur-md border border-white/10">
+                        Puskesmas Sampanahan
+                    </span>
+                    <h1 id="user-greeting" class="text-2xl font-extrabold text-white mt-4 tracking-tight">Selamat Datang</h1>
+                    <div class="flex items-center gap-2 mt-2">
+                        <div id="gps-status-dot" class="w-2 h-2 rounded-full bg-slate-300"></div>
+                        <span id="gps-status-text" class="text-[9px] font-bold text-white/70 uppercase tracking-widest">Inisialisasi GPS...</span>
                     </div>
                 </div>
-                
-                <div class="mt-8 flex flex-wrap items-center gap-3 relative z-10">
-                    <div class="bg-white/20 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/20 flex items-center gap-2">
-                        <span id="shift-icon" class="text-lg">☀️</span>
-                        <span id="shift-label" class="text-[10px] font-black uppercase tracking-wider">Shift Pagi</span>
+                <div class="text-right">
+                    <h2 id="time-display" class="text-3xl font-black text-white tabular-nums tracking-tighter">00:00</h2>
+                    <p id="date-display" class="text-[9px] font-bold text-teal-100 uppercase mt-1">---</p>
+                </div>
+            </div>
+            <div class="mt-8 flex gap-2">
+                <div class="bg-white/10 backdrop-blur-md border border-white/20 px-4 py-2 rounded-2xl flex items-center gap-3">
+                    <span id="shift-icon" class="text-lg"></span>
+                    <div class="leading-none">
+                        <p class="text-[8px] font-black text-teal-100 uppercase tracking-widest mb-1">Shift Aktif</p>
+                        <p id="shift-name" class="text-[10px] font-extrabold text-white uppercase">Pagi</p>
                     </div>
-                    <!-- NOTIF RADIUS GPS -->
-                    <div id="gps-indicator" onclick="updateGPS()" class="hidden bg-white/10 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10 flex items-center gap-2 transition-all cursor-pointer active:scale-95">
-                        <span id="gps-icon" class="text-xs">📍</span>
-                        <span id="gps-label" class="text-[9px] font-black uppercase tracking-wider">Mencari GPS...</span>
+                </div>
+            </div>
+        </header>
+
+        <main id="view-home" class="view-section active -mt-8 px-5 space-y-6">
+            <section id="card-auth" class="bg-white rounded-[2.5rem] p-8 shadow-xl shadow-slate-200/50 border border-slate-50 text-center relative z-20">
+                <div class="w-20 h-20 bg-teal-50 text-teal-600 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-6 shadow-inner">👩‍⚕️</div>
+                <h3 class="font-extrabold text-slate-800 text-sm uppercase tracking-tight">Verifikasi Identitas</h3>
+                <p class="text-slate-400 text-[10px] mt-2 mb-8 font-bold leading-relaxed">Silakan pilih nama Anda untuk mengakses <br> fitur presensi dan rekapitulasi.</p>
+                <div class="space-y-4">
+                    <div class="relative group">
+                        <select id="input-user" class="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-2xl text-xs font-black outline-none appearance-none text-center focus:border-teal-500 transition-all cursor-pointer">
+                            <option value="">Memuat Daftar Perawat...</option>
+                        </select>
+                        <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"></path></svg>
+                        </div>
                     </div>
-                    <button onclick="logout()" id="btn-logout" class="hidden bg-white/10 p-2.5 rounded-xl border border-white/10 hover:bg-white/20 transition-all">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                    <button onclick="handleLogin()" class="w-full bg-teal-600 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-teal-600/30 btn-press">
+                        Aktifkan Sesi
                     </button>
                 </div>
-            </div>
+            </section>
 
-            <div class="px-5 -mt-6 space-y-6 pb-20">
-                <!-- Login Card -->
-                <div id="card-login" class="bg-white rounded-[32px] p-8 shadow-xl border border-slate-50 text-center">
-                    <div class="w-16 h-16 bg-teal-50 text-teal-600 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4">👩‍⚕️</div>
-                    <h3 class="font-extrabold text-slate-800 text-sm mb-1 uppercase tracking-tight">Identitas Petugas</h3>
-                    <p class="text-slate-400 text-[10px] mb-6 font-bold">Pilih nama Anda untuk mengaktifkan sesi.</p>
-                    <div class="space-y-4">
-                        <select id="select-user" class="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-2xl text-sm font-bold outline-none appearance-none text-center">
-                            <option value="">Memuat data...</option>
-                        </select>
-                        <button onclick="loginUser()" class="w-full btn-primary text-xs uppercase tracking-[0.1em]">Mulai Bertugas</button>
-                    </div>
-                </div>
-
-                <!-- Planned Schedule -->
-                <div id="section-schedule" class="hidden">
-                    <div class="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
-                        <div onclick="toggleSchedule()" class="flex items-center justify-between p-5 cursor-pointer hover:bg-slate-50 transition-colors">
-                            <div>
-                                <h3 class="font-black text-slate-700 text-[10px] uppercase tracking-[0.2em]">📅 Jadwal Terencana</h3>
-                                <p id="schedule-date-detail" class="text-[8px] font-bold text-slate-400 uppercase mt-0.5 tracking-tight"></p>
-                            </div>
-                            <div class="flex items-center gap-3">
-                                <span class="bg-slate-100 text-slate-500 px-2 py-1 rounded-lg text-[7px] font-black uppercase">Lihat</span>
-                                <svg id="schedule-arrow" class="arrow-icon w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"></path></svg>
-                            </div>
+            <div id="dashboard-content" class="hidden space-y-8">
+                <div class="grid grid-cols-2 gap-4">
+                    <button onclick="logout()" class="bg-white border border-slate-100 p-5 rounded-3xl flex flex-col items-center gap-3 shadow-sm btn-press">
+                        <div class="w-10 h-10 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
                         </div>
-                        <div id="planned-list-container" class="accordion-content">
-                            <div id="planned-list" class="px-5 pb-5 space-y-3"></div>
+                        <span class="text-[9px] font-black uppercase text-slate-500 tracking-widest">Logout Sesi</span>
+                    </button>
+                    <button onclick="showView('rekap')" class="bg-white border border-slate-100 p-5 rounded-3xl flex flex-col items-center gap-3 shadow-sm btn-press">
+                        <div class="w-10 h-10 bg-teal-50 text-teal-600 rounded-xl flex items-center justify-center">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                        </div>
+                        <span class="text-[9px] font-black uppercase text-slate-500 tracking-widest">Lihat Rekap</span>
+                    </button>
+                </div>
+                <section>
+                    <div class="flex justify-between items-center mb-4 px-2">
+                        <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">📅 Jadwal Terencana</h3>
+                        <span id="logical-date-label" class="text-[8px] font-bold text-teal-600 bg-teal-50 px-2 py-0.5 rounded-lg">--/--/----</span>
+                    </div>
+                    <div id="schedule-container" class="space-y-3"></div>
+                </section>
+                <section>
+                    <div class="flex justify-between items-center mb-4 px-2">
+                        <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">📑 Log Kehadiran Real-time</h3>
+                        <div class="flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 bg-rose-500 rounded-full animate-ping"></span>
+                            <span class="text-[8px] font-black text-rose-500 uppercase tracking-widest">Live</span>
                         </div>
                     </div>
-                </div>
-
-                <!-- Actual Attendance Log -->
-                <div id="section-actual" class="hidden">
-                    <div class="flex items-center justify-between px-2 mb-3">
-                        <h3 class="font-black text-teal-600 text-[10px] uppercase tracking-[0.2em]">📑 Log Absen Scan</h3>
-                        <span class="bg-teal-500 text-white px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest status-pulse">Live</span>
-                    </div>
-                    <div id="actual-list" class="space-y-3"></div>
-                </div>
+                    <div id="live-log-container" class="space-y-3"></div>
+                </section>
             </div>
-        </div>
+        </main>
 
-        <!-- VIEW: REKAP -->
-        <div id="view-rekap" class="view-content">
-            <div class="bg-slate-900 p-6 pt-12 pb-10 text-white flex justify-between items-end shadow-lg" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);">
+        <main id="view-rekap" class="view-section px-5 space-y-8 pt-8">
+            <div class="flex justify-between items-end mb-2">
                 <div>
-                    <h2 class="text-xl font-black uppercase italic tracking-tight text-white">Arsip Laporan</h2>
-                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest" id="rekap-period">Periode Berjalan</p>
+                    <h2 class="text-xl font-black text-slate-800 tracking-tight">Arsip Laporan</h2>
+                    <p id="rekap-month-label" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Januari 2024</p>
                 </div>
-                <button onclick="exportCurrentMonth()" class="bg-teal-600 p-3 rounded-2xl border border-teal-500/30 hover:bg-teal-500 transition-all shadow-lg shadow-teal-900/20">
-                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                <button onclick="exportToExcel()" class="bg-slate-900 text-white p-3 rounded-2xl shadow-lg btn-press">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                 </button>
             </div>
-            <div class="p-4 space-y-6 pb-24">
-                <div class="rekap-wrapper shadow-2xl">
-                    <div id="rekap-container"></div>
-                </div>
-                <div class="space-y-3">
-                    <h3 class="font-black text-slate-400 text-[9px] uppercase tracking-[0.2em] px-2">📂 Riwayat Bulanan</h3>
-                    <div id="archive-list" class="grid grid-cols-1 gap-3"></div>
-                </div>
+            <div class="table-wrapper bg-white shadow-xl shadow-slate-200/50">
+                <div id="rekap-table-container" class="min-w-full"></div>
             </div>
-        </div>
+            <div class="bg-amber-50 border border-amber-100 p-4 rounded-2xl">
+                <p class="text-[9px] font-bold text-amber-700 leading-relaxed uppercase">
+                    <span class="font-black">Catatan:</span> Data rekap diperbarui secara otomatis setiap kali ada perawat yang melakukan scan QR di lokasi.
+                </p>
+            </div>
+        </main>
     </div>
 
-    <!-- BOTTOM NAVIGATION -->
-    <nav class="dashboard-nav">
-        <div class="nav-grid">
-            <button onclick="showView('home')" id="nav-home" class="nav-item active">
-                <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
-                <p class="text-[9px] font-black uppercase">Beranda</p>
+    <nav class="fixed bottom-0 left-0 right-0 max-w-[480px] mx-auto z-[100] px-6 pb-8 pt-4 bg-white/80 backdrop-blur-xl border-t border-slate-100 rounded-t-[2.5rem] shadow-[0_-20px_40px_rgba(0,0,0,0.03)]">
+        <div class="flex items-center gap-4">
+            <button onclick="showView('home')" id="nav-home" class="flex-1 py-4 flex flex-col items-center gap-1 rounded-2xl transition-all text-teal-600 bg-teal-50">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                <span class="text-[8px] font-black uppercase tracking-widest">Home</span>
             </button>
-            <button onclick="showView('rekap')" id="nav-rekap" class="nav-item">
-                <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-                <p class="text-[9px] font-black uppercase">Rekap</p>
+            <button onclick="initiateScan()" class="bg-teal-600 text-white p-5 rounded-3xl shadow-xl shadow-teal-600/30 -mt-12 btn-press border-4 border-white">
+                <div class="flex flex-col items-center gap-1">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
+                </div>
             </button>
-            <!-- Aksi Chat diubah ke Pop-up Pengembangan -->
-            <button onclick="showDevModal()" id="nav-chat" class="nav-item">
-                <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
-                <p class="text-[9px] font-black uppercase">Chat</p>
+            <button onclick="handleDevFeatures()" class="flex-1 py-4 flex flex-col items-center gap-1 rounded-2xl transition-all text-slate-400">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                <span class="text-[8px] font-black uppercase tracking-widest">Chat</span>
             </button>
         </div>
-        <button onclick="openScan()" class="btn-primary">
-            <span class="text-xl">🏥</span>
-            <span class="tracking-widest uppercase text-xs">Scan Presensi QR</span>
-        </button>
     </nav>
 </div>
 
-<!-- MODAL: SCANNER -->
-<div id="modal-scan" class="modal-overlay" onclick="if(event.target === this) closeScan()">
-    <div class="modal-card">
-        <div class="p-6 flex justify-between items-center border-b">
-            <h3 class="font-black text-slate-800 text-xs uppercase tracking-widest">Validasi QR Code</h3>
-            <button onclick="closeScan()" class="text-slate-400">✕</button>
-        </div>
-        <div class="bg-slate-100 aspect-square overflow-hidden relative">
-            <div id="reader" class="w-full h-full"></div>
-            <div class="absolute inset-0 border-[40px] border-black/40 pointer-events-none flex items-center justify-center">
-                <div class="w-full h-full border-2 border-teal-400 rounded-2xl shadow-[0_0_0_999px_rgba(0,0,0,0.4)]"></div>
+<div id="modal-scanner" class="modal-overlay" onclick="if(event.target === this) closeScanner()">
+    <div class="modal-sheet">
+        <div class="p-6 border-b border-slate-50 flex justify-between items-center">
+            <div>
+                <h4 class="text-xs font-black uppercase tracking-[0.2em] text-slate-800">Scan QR Presensi</h4>
+                <p class="text-[9px] font-bold text-slate-400 mt-0.5">Arahkan kamera ke kode QR di meja piket</p>
             </div>
+            <button onclick="closeScanner()" class="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-500">✕</button>
         </div>
-    </div>
-</div>
-
-<!-- MODAL: PENGEMBANGAN FITUR CHAT -->
-<div id="modal-dev" class="modal-overlay" onclick="if(event.target === this) closeDevModal()">
-    <div class="modal-card">
-        <div class="p-8 text-center">
-            <div class="w-20 h-20 bg-teal-50 text-teal-600 rounded-3xl flex items-center justify-center text-4xl mb-6 mx-auto">🚀</div>
-            <h3 class="font-black text-slate-800 text-lg uppercase mb-2 tracking-tight">Sistem Koordinasi Digital</h3>
-            <p class="text-xs font-bold text-slate-400 mb-8 leading-relaxed uppercase tracking-wider">Fitur ini sedang dalam tahap pengembangan intensif untuk meningkatkan efisiensi rekan medis.</p>
-            
-            <div class="text-left space-y-3 mb-10">
-                <p class="text-[9px] font-black text-teal-600 uppercase tracking-widest ml-1">Fitur Mendatang:</p>
-                <div class="dev-feature-item">
-                    <span class="text-lg">💬</span>
-                    <div>
-                        <p class="text-[10px] font-black text-slate-700 uppercase">Chat Real-Time</p>
-                        <p class="text-[9px] font-medium text-slate-400 uppercase">Koordinasi antar shift tanpa hambatan.</p>
-                    </div>
-                </div>
-                <div class="dev-feature-item">
-                    <span class="text-lg">📌</span>
-                    <div>
-                        <p class="text-[10px] font-black text-slate-700 uppercase">Laporan Sematan</p>
-                        <p class="text-[9px] font-medium text-slate-400 uppercase">Informasi pasien kritis selalu di bagian atas.</p>
-                    </div>
-                </div>
-                <div class="dev-feature-item">
-                    <span class="text-lg">💊</span>
-                    <div>
-                        <p class="text-[10px] font-black text-slate-700 uppercase">Log Obat Digital</p>
-                        <p class="text-[9px] font-medium text-slate-400 uppercase">Pengingat jam pemberian obat pasien.</p>
+        <div class="p-6">
+            <div class="bg-slate-900 aspect-square rounded-[2rem] overflow-hidden relative border-4 border-slate-100 shadow-inner">
+                <div id="qr-reader" class="w-full h-full"></div>
+                <div class="absolute inset-0 border-[40px] border-slate-900/50 pointer-events-none flex items-center justify-center">
+                    <div class="w-full h-full border-2 border-teal-500 rounded-2xl shadow-[0_0_0_999px_rgba(15,23,42,0.4)] relative">
+                        <div class="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-teal-400 rounded-tl-lg"></div>
+                        <div class="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-teal-400 rounded-tr-lg"></div>
+                        <div class="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-teal-400 rounded-bl-lg"></div>
+                        <div class="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-teal-400 rounded-br-lg"></div>
                     </div>
                 </div>
             </div>
-
-            <button onclick="closeDevModal()" class="w-full bg-slate-900 text-white py-5 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl active:scale-95 transition-all">Tunggu Pembaruan</button>
+            <div class="mt-6 bg-teal-50 p-4 rounded-2xl flex items-center gap-4">
+                <div class="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-teal-600 shadow-sm">📍</div>
+                <p class="text-[9px] font-bold text-teal-800 leading-tight">
+                    Pastikan Anda berada di dalam radius Puskesmas sebelum melakukan pemindaian.
+                </p>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw-Fl_qSNgqr9oEnn3vUmCtN4bRCZ5M7wz5YMiofUD33pN-kICuL6zubelKVcI_k2luXg/exec";
-    const QR_SECRET = "SISTEM-PRO-01";
-
-    const MONTHS = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-
-    let state = {
-        user: localStorage.getItem('nurse_user') || null,
-        data: { officers: [], logs: [], schedule: {}, chat: [], config: {} },
-        scanner: null,
-        isScheduleExpanded: false,
-        isWithinRadius: true, 
-        userDistance: 0,
-        lastRadiusStatus: null 
+    const CONFIG = {
+        WEB_APP_URL: "https://script.google.com/macros/s/AKfycbw-Fl_qSNgqr9oEnn3vUmCtN4bRCZ5M7wz5YMiofUD33pN-kICuL6zubelKVcI_k2luXg/exec",
+        DEFAULT_QR: "SISTEM-PRO-01",
+        MONTHS: ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"],
+        GPS_RADIUS: 100
     };
 
-    function safeNavigate(url) {
-        if (!url) return;
+    let state = {
+        user: localStorage.getItem('nurse_session_name') || null,
+        data: { officers: [], logs: [], schedule: {}, config: {} },
+        isWithinRadius: true, // Default true jika GPS dimatikan
+        distance: 0,
+        scanner: null
+    };
+
+    function showView(viewName) {
+        document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+        document.getElementById(`view-${viewName}`).classList.add('active');
+        document.getElementById('nav-home').className = viewName === 'home' 
+            ? "flex-1 py-4 flex flex-col items-center gap-1 rounded-2xl transition-all text-teal-600 bg-teal-50"
+            : "flex-1 py-4 flex flex-col items-center gap-1 rounded-2xl transition-all text-slate-400";
+        if (viewName === 'rekap') renderRekap();
+        document.getElementById('scroll-root').scrollTop = 0;
+    }
+
+    function showAlert(title, msg, type = 'success') {
+        const box = document.getElementById('alert-box');
+        const iconBg = document.getElementById('alert-icon-bg');
+        document.getElementById('alert-title').innerText = title;
+        document.getElementById('alert-msg').innerText = msg;
+        iconBg.className = `w-12 h-12 rounded-full flex items-center justify-center text-xl ${type === 'success' ? 'bg-teal-50 text-teal-600' : 'bg-rose-50 text-rose-600'}`;
+        iconBg.innerText = type === 'success' ? '✓' : '✕';
+        box.classList.add('show');
+        setTimeout(() => box.classList.remove('show'), 4000);
+    }
+
+    function toggleLoading(show) {
+        document.getElementById('loading-screen').classList.toggle('hidden', !show);
+    }
+
+    function getShiftInfo() {
+        const hr = new Date().getHours();
+        if (hr >= 8 && hr < 14) return { label: 'Pagi', code: 'P', icon: '🌤️' };
+        if (hr >= 14 && hr < 20) return { label: 'Siang', code: 'S', icon: '☀️' };
+        return { label: 'Malam', code: 'M', icon: '🌙' };
+    }
+
+    function getLogicalDate(date = new Date()) {
+        const d = new Date(date);
+        if (d.getHours() < 8) d.setDate(d.getDate() - 1);
+        return d.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\./g, '/');
+    }
+
+    async function fetchData(silent = false) {
+        if (!silent) toggleLoading(true);
         try {
-            if (window.self !== window.top) { window.open(url, '_top'); } 
-            else { window.location.href = url; }
-        } catch (e) { window.location.assign(url); }
+            const resp = await fetch(`${CONFIG.WEB_APP_URL}?action=getData`);
+            state.data = await resp.json();
+            renderDashboard();
+            if (state.user) checkGPS();
+        } catch (e) {
+            showAlert("Error", "Gagal menyambung ke server", "error");
+        } finally {
+            toggleLoading(false);
+        }
     }
 
-    // --- LOGIKA MODAL DEV ---
-    function showDevModal() {
-        const modal = document.getElementById('modal-dev');
-        if (modal) modal.style.display = 'flex';
+    function handleLogin() {
+        const val = document.getElementById('input-user').value;
+        if (!val) return showAlert("Peringatan", "Pilih nama Anda terlebih dahulu", "error");
+        state.user = val;
+        localStorage.setItem('nurse_session_name', val);
+        showAlert("Berhasil", `Sesi diaktifkan untuk ${val}`);
+        renderDashboard();
     }
 
-    function closeDevModal() {
-        const modal = document.getElementById('modal-dev');
-        if (modal) modal.style.display = 'none';
+    function logout() {
+        if (confirm("Akhiri sesi Anda?")) {
+            state.user = null;
+            localStorage.removeItem('nurse_session_name');
+            renderDashboard();
+        }
     }
 
-    // --- LOGIKA GPS ---
-    function getDistance(lat1, lon1, lat2, lon2) {
-        const R = 6371e3; 
+    function renderDashboard() {
+        const info = getShiftInfo();
+        const logicalDate = getLogicalDate();
+        document.getElementById('user-greeting').innerText = state.user ? `Halo, ${state.user}` : "Halo, Rekan Medis";
+        document.getElementById('shift-name').innerText = info.label;
+        document.getElementById('shift-icon').innerText = info.icon;
+        document.getElementById('logical-date-label').innerText = logicalDate;
+        document.getElementById('card-auth').classList.toggle('hidden', !!state.user);
+        document.getElementById('dashboard-content').classList.toggle('hidden', !state.user);
+        const sel = document.getElementById('input-user');
+        const currentVal = sel.value;
+        sel.innerHTML = `<option value="">-- Pilih Nama Perawat --</option>` + state.data.officers.map(o => `<option value="${o}" ${o === currentVal ? 'selected' : ''}>${o}</option>`).join('');
+        const day = parseInt(logicalDate.split('/')[0]);
+        let schHtml = '';
+        ['Pagi', 'Siang', 'Malam'].forEach(s => {
+            const code = s[0];
+            const isCurrent = s === info.label;
+            const names = state.data.officers.filter(n => {
+                const sData = state.data.schedule[n] || state.data.schedule[n.toUpperCase()];
+                return sData && (sData[day] === code || sData[String(day)] === code);
+            });
+            schHtml += `<div class="bg-white p-4 rounded-3xl border ${isCurrent ? 'border-teal-200 ring-4 ring-teal-50' : 'border-slate-100'} flex items-center justify-between">
+                    <div><p class="text-[8px] font-black uppercase tracking-widest ${isCurrent ? 'text-teal-600' : 'text-slate-400'}">Shift ${s}</p>
+                        <div class="flex flex-wrap gap-1 mt-2">${names.length ? names.map(n => `<span class="px-2 py-1 bg-slate-50 border border-slate-100 text-slate-700 rounded-lg text-[9px] font-bold">${n}</span>`).join('') : '<span class="text-[9px] text-slate-300 italic">Tidak ada jadwal</span>'}</div></div>
+                    ${isCurrent ? '<span class="w-10 h-10 bg-teal-50 rounded-full flex items-center justify-center text-teal-600">📌</span>' : ''}</div>`;
+        });
+        document.getElementById('schedule-container').innerHTML = schHtml;
+        const logs = state.data.logs.filter(l => l.date === logicalDate);
+        document.getElementById('live-log-container').innerHTML = logs.length ? logs.map(l => `<div class="bg-white p-4 rounded-3xl border border-slate-100 flex items-center gap-4">
+                <div class="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white font-black text-lg">${l.name[0]}</div>
+                <div class="flex-1"><p class="text-[10px] font-black text-slate-800 uppercase tracking-tight">${l.name}</p>
+                    <p class="text-[8px] font-bold text-slate-400 uppercase">Hadir Pukul ${l.time} • Shift ${l.shift}</p></div>
+                <div class="bg-emerald-50 text-emerald-600 px-3 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest">Hadir</div></div>`).join('') : `<div class="text-center py-10 text-[9px] font-bold text-slate-300 uppercase tracking-widest">Belum ada aktivitas hari ini</div>`;
+    }
+
+    function renderRekap() {
+        const now = new Date();
+        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        document.getElementById('rekap-month-label').innerText = `${CONFIG.MONTHS[now.getMonth()]} ${now.getFullYear()}`;
+        let html = `<table class="rekap-table"><thead><tr><th class="sticky-left">Perawat</th>`;
+        for(let i=1; i<=daysInMonth; i++) html += `<th>${i}</th>`;
+        html += `<th>TOT</th></tr></thead><tbody>`;
+        state.data.officers.forEach(name => {
+            let total = 0; html += `<tr><td class="sticky-left uppercase font-black text-slate-700">${name}</td>`;
+            for(let d=1; d<=daysInMonth; d++) {
+                const log = state.data.logs.find(l => {
+                    const parts = l.date.split('/');
+                    return l.name === name && parseInt(parts[0]) === d && parseInt(parts[1]) === (now.getMonth() + 1);
+                });
+                const code = log ? log.shift[0] : '';
+                if (code) total++;
+                html += `<td class="code-${code}">${code}</td>`;
+            }
+            html += `<td class="font-black text-slate-900 bg-slate-50">${total}</td></tr>`;
+        });
+        document.getElementById('rekap-table-container').innerHTML = html + `</tbody></table>`;
+    }
+
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371e3;
         const φ1 = lat1 * Math.PI/180;
         const φ2 = lat2 * Math.PI/180;
         const Δφ = (lat2-lat1) * Math.PI/180;
         const Δλ = (lon2-lon1) * Math.PI/180;
-        const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-                  Math.cos(φ1) * Math.cos(φ2) *
-                  Math.sin(Δλ/2) * Math.sin(Δλ/2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        return R * c;
+        const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
-    function updateGPS() {
-        const indicator = document.getElementById('gps-indicator');
-        const cfg = state.data.config || {};
+    function checkGPS() {
+        const dot = document.getElementById('gps-status-dot');
+        const text = document.getElementById('gps-status-text');
+
+        // Jika GPS LOCK dimatikan di admin, set indikator ke mode standby
+        const isLocked = state.data.config && state.data.config.gpsLock === true;
         
-        if (cfg.gpsLock === true) {
-            if (indicator) indicator.classList.remove('hidden');
+        if (!isLocked) {
+            dot.className = "w-2 h-2 rounded-full bg-slate-400";
+            text.innerText = "GPS STANDBY (OFF)";
+            state.isWithinRadius = true; // Bypass validasi
+            return;
+        }
 
-            if (!navigator.geolocation) {
-                updateGPSUI("ERROR", "GPS Tidak Didukung");
-                return;
+        if (!navigator.geolocation) { text.innerText = "GPS TIDAK DIDUKUNG"; return; }
+
+        navigator.geolocation.getCurrentPosition(pos => {
+            const targetLat = parseFloat(state.data.config.lat) || -2.6789;
+            const targetLng = parseFloat(state.data.config.lng) || 116.1234;
+            const allowed = parseInt(state.data.config.radius) || CONFIG.GPS_RADIUS;
+            state.distance = calculateDistance(pos.coords.latitude, pos.coords.longitude, targetLat, targetLng);
+            state.isWithinRadius = state.distance <= allowed;
+            
+            if (state.isWithinRadius) {
+                dot.className = "w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]";
+                text.innerText = "Lokasi Valid (Puskesmas)";
+            } else {
+                dot.className = "w-2 h-2 rounded-full bg-rose-400 animate-pulse";
+                text.innerText = `${Math.round(state.distance)}m DILUAR RADIUS`;
             }
+        }, err => { 
+            text.innerText = "GPS TERKUNCI / IZINKAN AKSES"; 
+        }, { enableHighAccuracy: true });
+    }
 
-            navigator.geolocation.getCurrentPosition((pos) => {
-                const targetLat = parseFloat(cfg.lat) || -2.6789;
-                const targetLng = parseFloat(cfg.lng) || 116.1234;
-                const allowedRad = parseInt(cfg.radius) || 100;
+    async function initiateScan() {
+        if (!state.user) return showAlert("Akses Ditolak", "Identitas belum diverifikasi", "error");
+        
+        // Verifikasi GPS hanya jika fitur GPS LOCK diaktifkan di admin
+        if (state.data.config && state.data.config.gpsLock === true) {
+            checkGPS();
+            if (!state.isWithinRadius) { 
+                return showAlert("Lokasi Tidak Valid", `Anda berada ${Math.round(state.distance)}m diluar area Puskesmas.`, "error"); 
+            }
+        }
 
-                const dist = getDistance(pos.coords.latitude, pos.coords.longitude, targetLat, targetLng);
-                state.userDistance = dist;
-                state.isWithinRadius = dist <= allowedRad;
-                
-                if (state.isWithinRadius) {
-                    updateGPSUI("OK", "Dalam Radius");
-                    state.lastRadiusStatus = "OK";
-                } else {
-                    updateGPSUI("OUT", `${Math.round(dist)}m Diluar`);
-                    if (state.lastRadiusStatus !== "OUT") {
-                        showAlert("Peringatan Lokasi", `Anda berada diluar radius (${Math.round(dist)}m). Presensi hanya dapat dilakukan di area Puskesmas.`, "error");
-                        state.lastRadiusStatus = "OUT";
+        // Tampilkan modal pemindai
+        document.getElementById('modal-scanner').style.display = 'flex';
+        
+        // Pastikan scanner sebelumnya dibersihkan jika ada
+        if (state.scanner) {
+            try {
+                await state.scanner.stop();
+            } catch(e) {}
+            state.scanner = null;
+        }
+
+        // Inisialisasi scanner baru
+        state.scanner = new Html5Qrcode("qr-reader");
+        const dynamicSecret = (state.data.config && state.data.config.qrData) || CONFIG.DEFAULT_QR;
+
+        try {
+            await state.scanner.start(
+                { facingMode: "environment" },
+                { 
+                    fps: 20, 
+                    qrbox: (viewfinderWidth, viewfinderHeight) => {
+                        let minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+                        let qrboxSize = Math.floor(minEdge * 0.7);
+                        return { width: qrboxSize, height: qrboxSize };
+                    },
+                    aspectRatio: 1.0
+                },
+                async (txt) => {
+                    // Validasi hasil scan
+                    if (txt === dynamicSecret) {
+                        await state.scanner.stop();
+                        state.scanner = null;
+                        closeScanner();
+                        processPresence();
+                    } else {
+                        // Umpan balik jika kode salah
+                        console.warn("Kode QR tidak valid:", txt);
+                        showAlert("Kode Salah", "QR Code ini bukan milik sistem presensi.", "error");
                     }
                 }
-            }, (err) => {
-                updateGPSUI("ERROR", "GPS Terkunci");
-            }, { enableHighAccuracy: true });
-        } else {
-            state.isWithinRadius = true;
-            if (indicator) indicator.classList.add('hidden');
+            );
+        } catch (e) {
+            console.error("Gagal memulai scanner:", e);
+            showAlert("Kamera Gagal", "Gagal mengakses kamera. Pastikan izin telah diberikan.", "error");
+            closeScanner();
         }
     }
 
-    function updateGPSUI(status, label) {
-        const indicator = document.getElementById('gps-indicator');
-        const labelEl = document.getElementById('gps-label');
-        if (!indicator || !labelEl) return;
-
-        indicator.classList.remove('bg-white/10', 'bg-emerald-500/30', 'bg-rose-500/30', 'border-white/10', 'border-emerald-400', 'border-rose-400');
-
-        labelEl.innerText = label;
-        if (status === "OK") {
-            indicator.classList.add('bg-emerald-500/30', 'border-emerald-400');
-        } else if (status === "OUT") {
-            indicator.classList.add('bg-rose-500/30', 'border-rose-400');
-        } else {
-            indicator.classList.add('bg-white/10', 'border-white/10');
+    function closeScanner() {
+        const modal = document.getElementById('modal-scanner');
+        if (modal) modal.style.display = 'none';
+        
+        if (state.scanner) {
+            state.scanner.stop().then(() => {
+                state.scanner = null;
+                console.log("Scanner dihentikan.");
+            }).catch(err => {
+                console.warn("Gagal menghentikan scanner:", err);
+            });
         }
     }
 
-    function showAlert(title, msg, type = 'success') {
-        const alert = document.getElementById('custom-alert');
-        if (!alert) return;
-        document.getElementById('alert-title').innerText = title;
-        document.getElementById('alert-msg').innerText = msg;
-        const icon = document.getElementById('alert-icon');
-        icon.className = `w-10 h-10 rounded-full flex items-center justify-center text-xl ${type === 'error' ? 'bg-rose-50 text-rose-600' : 'bg-teal-50 text-teal-600'}`;
-        icon.innerHTML = type === 'error' ? '✕' : '✓';
-        alert.classList.add('show');
-        setTimeout(() => alert.classList.remove('show'), 5000);
-    }
-
-    function showLoading(show) { document.getElementById('loading-overlay').classList.toggle('hidden', !show); }
-
-    function getShift() {
-        const hr = new Date().getHours();
-        if(hr >= 8 && hr < 14) return { label: 'Pagi', code: 'P', icon: '☀️' };
-        if(hr >= 14 && hr < 20) return { label: 'Siang', code: 'S', icon: '🌤️' };
-        return { label: 'Malam', code: 'M', icon: '🌙' };
-    }
-
-    function getLogicalDate(date) {
-        let d = new Date(date);
-        if (d.getHours() < 8) d.setDate(d.getDate() - 1);
-        const dd = String(d.getDate()).padStart(2, '0');
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const yyyy = d.getFullYear();
-        return `${dd}/${mm}/${yyyy}`;
-    }
-
-    function toggleSchedule() {
-        state.isScheduleExpanded = !state.isScheduleExpanded;
-        const container = document.getElementById('planned-list-container');
-        const arrow = document.getElementById('schedule-arrow');
-        if (state.isScheduleExpanded) {
-            container.classList.add('open');
-            arrow.classList.add('rotated');
-        } else {
-            container.classList.remove('open');
-            arrow.classList.remove('rotated');
-        }
-    }
-
-    async function apiRequest(action, payload = {}) {
-        const url = `${WEB_APP_URL}?action=${action}`;
-        const options = action === 'getData' ? {} : { method: 'POST', body: JSON.stringify({ action, payload }) };
-        try { const r = await fetch(url, options); return await r.json(); }
-        catch (e) { throw e; }
-    }
-
-    async function fetchData(silent = false) {
-        if(!silent) showLoading(true);
-        try { 
-            const result = await apiRequest('getData'); 
-            state.data = result; 
-            renderAll(); 
-            updateGPS(); 
-        }
-        catch (e) { showAlert("Koneksi Gagal", "Gagal menghubungi server.", "error"); }
-        finally { showLoading(false); }
-    }
-
-    function renderAll() {
+    async function processPresence() {
+        toggleLoading(true);
+        const shift = getShiftInfo();
         const now = new Date();
-        const sh = getShift();
-        const logicalDateStr = getLogicalDate(now);
-        
-        const clockEl = document.getElementById('clock');
-        if(clockEl) clockEl.innerText = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        const dateEl = document.getElementById('date-label');
-        if(dateEl) dateEl.innerText = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });
-        const shLbl = document.getElementById('shift-label');
-        if(shLbl) shLbl.innerText = `Shift ${sh.label}`;
-        const shIco = document.getElementById('shift-icon');
-        if(shIco) shIco.innerText = sh.icon;
-        const schDet = document.getElementById('schedule-date-detail');
-        if(schDet) schDet.innerText = logicalDateStr;
-
-        const dispName = document.getElementById('display-name');
-        if(dispName) dispName.innerText = state.user ? `Halo, ${state.user}` : "Halo, Rekan Medis";
-        const btnOut = document.getElementById('btn-logout');
-        if(btnOut) btnOut.classList.toggle('hidden', !state.user);
-        const cardLog = document.getElementById('card-login');
-        if(cardLog) cardLog.classList.toggle('hidden', !!state.user);
-        const secSch = document.getElementById('section-schedule');
-        if(secSch) secSch.classList.toggle('hidden', !state.user);
-        const secAct = document.getElementById('section-actual');
-        if(secAct) secAct.classList.toggle('hidden', !state.user);
-
-        const select = document.getElementById('select-user');
-        if(select) {
-            const optionsHtml = '<option value="">-- Pilih Nama --</option>' + state.data.officers.map(o => `<option value="${o}">${o}</option>`).join('');
-            if (select.innerHTML !== optionsHtml && document.activeElement !== select) { select.innerHTML = optionsHtml; }
-        }
-
-        let schedHtml = '';
-        const dayForLookup = parseInt(logicalDateStr.split('/')[0]);
-        ['Pagi', 'Siang', 'Malam'].forEach(s => {
-            const code = s[0];
-            const isTarget = s === sh.label;
-            const names = state.data.officers.filter(n => {
-                const personSched = state.data.schedule[n] || state.data.schedule[n.toUpperCase()];
-                return personSched && (personSched[dayForLookup] === code || personSched[String(dayForLookup)] === code);
-            });
-            schedHtml += `
-                <div class="bg-slate-50 p-4 rounded-2xl border ${isTarget ? 'border-teal-200 ring-2 ring-teal-50 bg-white' : 'border-slate-100'} flex flex-col gap-2 transition-all">
-                    <div class="flex justify-between items-center">
-                        <span class="text-[9px] font-black uppercase tracking-widest ${isTarget ? 'text-teal-600' : 'text-slate-400'}">${s}</span>
-                        ${isTarget ? '<span class="flex items-center gap-1.5"><span class="text-[7px] font-black text-teal-500 uppercase">Sekarang</span><span class="w-1.5 h-1.5 rounded-full bg-teal-500 animate-ping"></span></span>' : ''}
-                    </div>
-                    <div class="flex flex-wrap gap-1.5">
-                        ${names.length ? names.map(n => `<span class="px-2.5 py-1.5 bg-white border border-slate-100 shadow-sm text-slate-700 rounded-xl text-[9px] font-black uppercase">${n}</span>`).join('') : '<span class="text-[9px] italic text-slate-300 font-bold uppercase py-1">Tidak ada jadwal</span>'}
-                    </div>
-                </div>`;
-        });
-        const planList = document.getElementById('planned-list');
-        if(planList) planList.innerHTML = schedHtml;
-
-        const logsToShow = state.data.logs.filter(l => l.name && l.date === logicalDateStr);
-        const actList = document.getElementById('actual-list');
-        if(actList) {
-            actList.innerHTML = logsToShow.length ? logsToShow.map(l => {
-                const isCurrentShiftActive = (l.shift === sh.label);
-                let statusText = isCurrentShiftActive ? "Sedang Jaga" : "Sudah Selesai";
-                let statusColorClass = isCurrentShiftActive ? "text-emerald-500" : "text-slate-400";
-                let statusBgClass = isCurrentShiftActive ? "bg-emerald-50" : "bg-slate-50";
-                let dotColorClass = isCurrentShiftActive ? "bg-emerald-500 animate-pulse" : "bg-slate-300";
-
-                return `
-                <div class="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-xl bg-teal-600 text-white flex items-center justify-center font-black text-sm relative">
-                            ${l.name ? l.name[0] : '?'}
-                            <span class="absolute -top-1 -right-1 w-2.5 h-2.5 ${dotColorClass} border-2 border-white rounded-full"></span>
-                        </div>
-                        <div>
-                            <p class="text-[10px] font-black uppercase text-slate-800">${l.name || 'Petugas'}</p>
-                            <p class="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">Shift ${l.shift} • ${l.time}</p>
-                        </div>
-                    </div>
-                    <div class="${statusBgClass} ${statusColorClass} px-3 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest border border-current/10">
-                        ${statusText}
-                    </div>
-                </div>`;
-            }).join('') : '<p class="text-center py-6 text-[9px] font-bold text-slate-300 uppercase tracking-[0.2em]">Belum ada data presensi periode ini</p>';
-        }
-
-        renderRekap();
-    }
-
-    function renderRekap() {
-        const viewRekap = document.getElementById('view-rekap');
-        if (!viewRekap || !viewRekap.classList.contains('active')) return;
-        const now = new Date(); const daysInMo = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-        let table = `<table class="editor-table"><thead><tr><th class="sticky-col">PERAWAT</th>`;
-        for(let d=1; d<=daysInMo; d++) table += `<th>${d}</th>`;
-        table += `<th class="sticky-col-right text-slate-800">TOT</th></tr></thead><tbody>`;
-        state.data.officers.forEach(name => {
-            let total = 0; table += `<tr><td class="sticky-col uppercase text-[9px]">${name}</td>`;
-            for(let d=1; d<=daysInMo; d++) {
-                const log = state.data.logs.find(l => {
-                    if(!l.date) return false;
-                    const p = l.date.split('/');
-                    return l.name === name && parseInt(p[0]) === d && parseInt(p[1]) === (now.getMonth() + 1);
-                });
-                const code = log ? log.shift[0] : ''; if(code) total++;
-                table += `<td class="cell-${code} font-bold">${code}</td>`;
-            }
-            table += `<td class="sticky-col-right font-black text-slate-800">${total}</td></tr>`;
-        });
-        const rekCont = document.getElementById('rekap-container');
-        if(rekCont) rekCont.innerHTML = table + `</tbody></table>`;
-        const rekPer = document.getElementById('rekap-period');
-        if(rekPer) rekPer.innerText = `${MONTHS[now.getMonth()]} ${now.getFullYear()}`;
-    }
-
-    function loginUser() {
-        const sel = document.getElementById('select-user');
-        const val = sel ? sel.value : null;
-        if(!val) return showAlert("Peringatan", "Pilih nama perawat dahulu.", "error");
-        state.user = val; localStorage.setItem('nurse_user', val);
-        renderAll(); showAlert("Selamat Datang", `Sesi Anda aktif.`);
-    }
-
-    function logout() {
-        if(confirm("Keluar dari sesi?")) { localStorage.removeItem('nurse_user'); state.user = null; renderAll(); }
-    }
-
-    function showView(v) {
-        document.querySelectorAll('.view-content').forEach(el => el.classList.remove('active'));
-        const vEl = document.getElementById(`view-${v}`);
-        if(vEl) vEl.classList.add('active');
-        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-        const nEl = document.getElementById(`nav-${v}`);
-        if(nEl) nEl.classList.add('active');
-        renderAll();
-    }
-
-    async function openScan() {
-        if(!state.user) return showAlert("Akses Ditolak", "Login sebagai perawat.", "error");
-        
-        if (state.data.config && state.data.config.gpsLock === true) {
-            updateGPS();
-            if (!state.isWithinRadius) {
-                return showAlert("Lokasi Tidak Valid", `Anda berada ${Math.round(state.userDistance)}m di luar area Puskesmas. Mohon mendekat ke lokasi.`, "error");
-            }
-        }
-
-        document.getElementById('modal-scan').style.display = 'flex';
-        state.scanner = new Html5Qrcode("reader");
         try {
-            await state.scanner.start({ facingMode: "environment" }, { fps: 15, qrbox: 250 }, async (txt) => {
-                if(txt === QR_SECRET) { await state.scanner.stop(); closeScan(); submitPresence(); }
+            const resp = await fetch(CONFIG.WEB_APP_URL, {
+                method: 'POST',
+                body: JSON.stringify({
+                    action: 'saveScan',
+                    payload: {
+                        name: state.user,
+                        date: getLogicalDate(now),
+                        shift: shift.label,
+                        time: now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+                    }
+                })
             });
-        } catch (e) { showAlert("Kamera Eror", "Gagal akses kamera.", "error"); closeScan(); }
+            const res = await resp.json();
+            if (res.status === 'success') {
+                showAlert("Sukses", "Kehadiran Anda berhasil dicatat!");
+                fetchData(true);
+            }
+        } catch (e) {
+            showAlert("Gagal", "Gagal menyimpan data ke server", "error");
+        } finally {
+            toggleLoading(false);
+        }
     }
 
-    function closeScan() { if(state.scanner) state.scanner.stop().catch(console.error); document.getElementById('modal-scan').style.display = 'none'; }
-
-    async function submitPresence() {
-        const sh = getShift(); const now = new Date(); showLoading(true);
-        try {
-            const res = await apiRequest('saveScan', { 
-                name: state.user, date: getLogicalDate(now), 
-                shift: sh.label, time: now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) 
-            });
-            if(res.status === 'success') { showAlert("Berhasil", "Kehadiran dicatat."); fetchData(true); }
-        } catch (e) { showAlert("Gagal", "Gagal simpan data.", "error"); }
-        finally { showLoading(false); }
+    function exportToExcel() {
+        const table = document.getElementById('rekap-table-container').querySelector('table');
+        if (!table) return;
+        const wb = XLSX.utils.table_to_book(table);
+        XLSX.writeFile(wb, `Rekap_Presensi_Perawat_${CONFIG.MONTHS[new Date().getMonth()]}.xlsx`);
     }
 
-    function exportCurrentMonth() {
-        const t = document.getElementById('rekap-container').querySelector('table');
-        if(!t) return;
-        const wb = XLSX.utils.table_to_book(t);
-        XLSX.writeFile(wb, `Rekap_Presensi_${MONTHS[new Date().getMonth()]}.xlsx`);
-    }
+    function handleDevFeatures() { showAlert("Pengembangan", "Fitur Koordinasi Chat sedang dalam tahap integrasi."); }
 
     window.onload = () => {
         fetchData();
-        setInterval(() => { renderAll(); }, 1000);
         setInterval(() => {
-            if (state.data.config && state.data.config.gpsLock === true) updateGPS();
-        }, 10000); 
-        setInterval(() => fetchData(true), 30000);
+            const now = new Date();
+            document.getElementById('time-display').innerText = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            document.getElementById('date-display').innerText = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });
+        }, 1000);
+        setInterval(() => fetchData(true), 60000);
+        setInterval(() => { 
+            checkGPS(); 
+        }, 15000);
     };
 </script>
 </body>
