@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Chat Koordinasi - Puskesmas Sampanahan</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #0d9488;
+            --primary-dark: #0f766e;
+            --primary-light: #f0fdfa;
+            --accent: #f43f5e;
+            --bg: #f8fafc;
+        }
+
+        * { 
+            box-sizing: border-box; 
+            -webkit-tap-highlight-color: transparent; 
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        
+        body {
+            background-color: #f1f5f9;
+            height: 100dvh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .chat-wrapper { 
+            width: 100%;
+            max-width: 500px; 
+            background: white; 
+            height: 100dvh; 
+            display: flex; 
+            flex-direction: column;
+            box-shadow: 0 0 50px rgba(0,0,0,0.1);
+        }
+
+        /* Navigasi */
+        .dashboard-nav {
+            background: white; border-top: 1px solid #f1f5f9;
+            padding: 12px 16px; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+            display: flex; flex-direction: column; gap: 12px; 
+            box-shadow: 0 -10px 30px rgba(0,0,0,0.05); z-index: 100; border-radius: 30px 30px 0 0;
+        }
+        .nav-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .nav-item {
+            display: flex; flex-direction: column; align-items: center; gap: 4px;
+            padding: 8px; border-radius: 16px; color: #94a3b8; transition: 0.3s;
+        }
+        .nav-item.active { background: var(--primary-light); color: var(--primary); }
+
+        .btn-primary {
+            background: var(--primary); color: white;
+            padding: 16px; border-radius: 18px; font-weight: 800;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            transition: 0.2s; box-shadow: 0 10px 20px rgba(13, 148, 136, 0.2);
+        }
+        .btn-primary:active { transform: scale(0.97); }
+
+        /* Bubble Chat */
+        #chat-box::-webkit-scrollbar { width: 4px; }
+        #chat-box::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+        
+        .chat-bubble { cursor: pointer; transition: all 0.2s; position: relative; }
+        .chat-bubble:active { transform: scale(0.98); }
+        .msg-enter { animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Pinned Section */
+        #pinned-area {
+            max-height: 80px; overflow-y: auto;
+            border-bottom: 1px solid #f1f5f9; background: #fffbeb;
+        }
+
+        /* Action Menu */
+        .msg-actions {
+            display: none;
+            gap: 12px;
+            margin-top: 4px;
+            padding: 4px 8px;
+            animation: fadeIn 0.2s ease;
+        }
+        .msg-actions.show { display: flex; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .modal-overlay { 
+            position: fixed; inset: 0; background: rgba(15, 23, 42, 0.8); 
+            backdrop-filter: blur(8px); z-index: 1000; 
+            display: none; align-items: center; justify-content: center; padding: 20px;
+        }
+        .modal-card { 
+            background: white; width: 100%; max-width: 400px; border-radius: 28px; 
+            overflow: hidden; animation: modalSlide 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes modalSlide { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+
+        #custom-alert {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-100px);
+            width: 90%; max-width: 380px; background: white; z-index: 2000;
+            padding: 16px; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            display: flex; align-items: center; gap: 12px; transition: 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+            opacity: 0;
+        }
+        #custom-alert.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+        .status-tick { font-size: 10px; margin-left: 4px; }
+        .status-pending { color: #94a3b8; }
+        .status-sent { color: #2dd4bf; }
+    </style>
+</head>
+<body>
+
+<div id="custom-alert">
+    <div id="alert-icon" class="w-10 h-10 rounded-full flex items-center justify-center text-xl bg-teal-50 text-teal-600">✓</div>
+    <div class="flex-1">
+        <p id="alert-title" class="text-xs font-extrabold uppercase text-slate-800 tracking-tight">Info</p>
+        <p id="alert-msg" class="text-[10px] font-bold text-slate-500 leading-tight"></p>
+    </div>
+</div>
+
+<div id="auth-overlay" class="fixed inset-0 bg-white z-[5000] hidden flex-col items-center justify-center text-center p-10">
+    <div class="w-20 h-20 bg-rose-50 text-rose-500 rounded-3xl flex items-center justify-center text-4xl mb-6 mx-auto">🔒</div>
+    <h2 class="text-xl font-black text-slate-800 uppercase mb-2">Sesi Berakhir</h2>
+    <button onclick="safeNavigate('index.html')" class="bg-teal-600 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl active:scale-95 transition-all">Ke Beranda</button>
+</div>
+
+<div class="chat-wrapper">
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-100 p-4 pt-10 flex justify-between items-center sticky top-0 z-20">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-teal-600 rounded-full flex items-center justify-center text-white shadow-lg">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"></path></svg>
+            </div>
+            <div>
+                <h2 class="text-sm font-black text-slate-800 uppercase tracking-wider">Grup Koordinasi</h2>
+                <div class="flex items-center gap-1.5">
+                    <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+                    <p id="user-info" class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Menghubungkan...</p>
+                </div>
+            </div>
+        </div>
+        <button onclick="safeNavigate('index.html')" class="w-10 h-10 flex items-center justify-center bg-slate-50 rounded-xl text-slate-400 hover:bg-slate-100 transition-all">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+    </header>
+
+    <!-- Pinned Area -->
+    <div id="pinned-area" class="hidden"></div>
+
+    <!-- Area Pesan -->
+    <main id="chat-box" class="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50">
+        <div class="flex justify-center py-10">
+            <div class="w-6 h-6 border-2 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+    </main>
+
+    <!-- Input Bar -->
+    <div class="px-4 py-3 bg-white border-t border-slate-100">
+        <div class="flex items-center gap-2">
+            <button onclick="openReportModal()" class="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-xl text-slate-400 active:bg-slate-200 transition-all shadow-sm">
+                📋
+            </button>
+            <div class="flex-1 relative">
+                <input type="text" id="chat-input" placeholder="Tulis pesan..." class="w-full bg-slate-100 p-4 rounded-2xl text-xs font-bold outline-none focus:bg-white focus:ring-2 focus:ring-teal-100 transition-all border border-transparent focus:border-teal-200">
+            </div>
+            <button onclick="sendChatMessage()" id="btn-send" class="w-12 h-12 bg-teal-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 12h14M12 5l7 7-7 7"></path></svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Navigasi Bawah -->
+    <nav class="dashboard-nav">
+        <div class="nav-grid">
+            <button onclick="safeNavigate('https://presensi-sampanahan.blogspot.com')" id="nav-home" class="nav-item">
+                <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                <p class="text-[9px] font-black uppercase">Beranda</p>
+            </button>
+            <button onclick="safeNavigate('index.html')" id="nav-rekap" class="nav-item">
+                <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                <p class="text-[9px] font-black uppercase">Rekap</p>
+            </button>
+            <button onclick="location.reload()" id="nav-chat" class="nav-item active">
+                <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+                <p class="text-[9px] font-black uppercase">Chat</p>
+            </button>
+        </div>
+    </nav>
+</div>
+
+<!-- Modal Laporan Pasien -->
+<div id="modal-report" class="modal-overlay" onclick="if(event.target === this) closeReportModal()">
+    <div class="modal-card max-h-[90vh] flex flex-col">
+        <div class="p-6 border-b flex justify-between items-center bg-white">
+            <h3 class="font-black text-slate-800 text-xs uppercase tracking-widest text-slate-800">📝 Laporan Untuk Shift Selanjutnya</h3>
+            <button onclick="closeReportModal()" class="text-slate-400">✕</button>
+        </div>
+        <div class="p-6 space-y-4 overflow-y-auto flex-1 bg-white">
+            <div>
+                <label class="block text-[9px] font-black uppercase text-slate-400 mb-1 ml-1">Nama Pasien / Bed</label>
+                <input type="text" id="rep-name" placeholder="Tn. Ahmad - Bed 04" class="w-full bg-slate-50 border border-slate-100 p-4 rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-teal-100">
+            </div>
+            <div>
+                <label class="block text-[9px] font-black uppercase text-slate-400 mb-1 ml-1">Kondisi / Keluhan</label>
+                <input type="text" id="rep-cond" placeholder="Demam tinggi, Sesak napas..." class="w-full bg-slate-50 border border-slate-100 p-4 rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-teal-100">
+            </div>
+            <div>
+                <label class="block text-[9px] font-black uppercase text-slate-400 mb-1 ml-1">Nama Obat</label>
+                <input type="text" id="rep-med" placeholder="Paracetamol 500mg, Infus RL..." class="w-full bg-slate-50 border border-slate-100 p-4 rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-teal-100">
+            </div>
+            <div>
+                <label class="block text-[9px] font-black uppercase text-slate-400 mb-1 ml-1">Jam Minum / Pemberian</label>
+                <input type="time" id="rep-time" class="w-full bg-slate-50 border border-slate-100 p-4 rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-teal-100">
+            </div>
+            <button onclick="submitReport()" class="w-full bg-teal-600 text-white font-black text-[10px] uppercase tracking-widest py-5 rounded-2xl shadow-xl active:scale-95 transition-all">
+                Kirim Notifikasi Laporan
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw-Fl_qSNgqr9oEnn3vUmCtN4bRCZ5M7wz5YMiofUD33pN-kICuL6zubelKVcI_k2luXg/exec";
+    
+    let state = {
+        user: localStorage.getItem('nurse_user'),
+        chat: [],
+        editIndex: null,
+        pinnedIds: JSON.parse(localStorage.getItem('pinned_msgs') || "[]"),
+        pendingIds: [] // Untuk melacak pesan yang sedang dikirim
+    };
+
+    function safeNavigate(url) {
+        if (!url) return;
+        try {
+            if (window.self !== window.top) { window.open(url, '_top'); } 
+            else { window.location.href = url; }
+        } catch (e) { window.location.assign(url); }
+    }
+
+    function checkSession() {
+        if (!state.user || state.user === "null" || state.user === "") {
+            document.getElementById('auth-overlay').classList.remove('hidden');
+            document.getElementById('auth-overlay').style.display = 'flex';
+            return false;
+        }
+        return true;
+    }
+
+    function showAlert(title, msg, type = 'success') {
+        const alert = document.getElementById('custom-alert');
+        if (!alert) return;
+        document.getElementById('alert-title').innerText = title;
+        document.getElementById('alert-msg').innerText = msg;
+        const icon = document.getElementById('alert-icon');
+        icon.className = `w-10 h-10 rounded-full flex items-center justify-center text-xl ${type === 'error' ? 'bg-rose-50 text-rose-600' : 'bg-teal-50 text-teal-600'}`;
+        icon.innerHTML = type === 'error' ? '✕' : '✓';
+        alert.classList.add('show');
+        setTimeout(() => alert.classList.remove('show'), 4000);
+    }
+
+    async function fetchData() {
+        if (!state.user) return;
+        try {
+            const r = await fetch(`${WEB_APP_URL}?action=getData`);
+            const data = await r.json();
+            if (data && data.chat) {
+                state.chat = data.chat;
+                renderChat();
+                renderPinned();
+            }
+        } catch (e) { console.error("Sync gagal."); }
+    }
+
+    function renderChat() {
+        const box = document.getElementById('chat-box');
+        const userDisplay = document.getElementById('user-info');
+        if (userDisplay) userDisplay.innerText = state.user;
+        if (!box) return;
+
+        const chatHtml = state.chat.map((m, idx) => {
+            const isMe = m.name === state.user;
+            const isReport = m.message && m.message.includes('📌 *LAPORAN PASIEN*');
+            const isPinned = state.pinnedIds.includes(m.time + m.name);
+            const isPending = state.pendingIds.includes(m.id || (m.time + m.name + m.message));
+            
+            // Logika Centang
+            const tickHtml = isMe ? (isPending ? 
+                `<span class="status-tick status-pending">✓</span>` : 
+                `<span class="status-tick status-sent">✓✓</span>`) : '';
+
+            return `
+                <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} msg-enter">
+                    <div onclick="toggleActions(${idx})" class="chat-bubble max-w-[85%] ${isMe ? 'bg-teal-600 text-white' : 'bg-white text-slate-700'} p-3.5 rounded-2xl shadow-sm border border-slate-100 ${isReport ? 'ring-2 ring-amber-400' : ''}">
+                        <p class="text-[8px] font-black uppercase mb-1 ${isMe ? 'text-teal-200' : 'text-teal-600'}">${m.name} ${isPinned ? '📌' : ''}</p>
+                        <div class="text-[11px] font-medium leading-relaxed whitespace-pre-wrap">${m.message.replace(/\n/g, '<br>')}</div>
+                        <div class="flex items-center justify-end mt-1.5 opacity-60">
+                            <p class="text-[7px] font-bold">${m.time}</p>
+                            ${tickHtml}
+                        </div>
+                    </div>
+                    ${isMe ? `
+                        <div id="actions-${idx}" class="msg-actions">
+                            <button onclick="editMsg(${idx})" class="text-[8px] font-black text-teal-600 uppercase">Edit</button>
+                            <button onclick="deleteMsg(${idx})" class="text-[8px] font-black text-rose-500 uppercase">Hapus</button>
+                            <button onclick="togglePin(${idx})" class="text-[8px] font-black text-amber-500 uppercase">Sematkan</button>
+                        </div>
+                    ` : `
+                        <div id="actions-${idx}" class="msg-actions">
+                            <button onclick="togglePin(${idx})" class="text-[8px] font-black text-amber-500 uppercase">Sematkan</button>
+                        </div>
+                    `}
+                </div>`;
+        }).join('');
+
+        const isAtBottom = box.scrollHeight - box.scrollTop <= box.clientHeight + 200;
+        box.innerHTML = chatHtml || '<div class="text-center py-10 text-[10px] font-bold text-slate-300 uppercase tracking-widest">Belum ada pesan</div>';
+        if (isAtBottom) box.scrollTop = box.scrollHeight;
+    }
+
+    function renderPinned() {
+        const pinArea = document.getElementById('pinned-area');
+        const pinnedMsgs = state.chat.filter(m => state.pinnedIds.includes(m.time + m.name));
+        
+        if (pinnedMsgs.length > 0) {
+            pinArea.classList.remove('hidden');
+            pinArea.innerHTML = pinnedMsgs.map(m => `
+                <div class="px-4 py-2 flex items-center justify-between border-b border-amber-100/50">
+                    <div class="flex-1 truncate pr-4">
+                        <p class="text-[7px] font-black text-amber-600 uppercase">Pinned: ${m.name}</p>
+                        <p class="text-[9px] font-bold text-slate-600 truncate">${m.message.replace(/\n/g, ' ')}</p>
+                    </div>
+                    <span class="text-[10px]">📌</span>
+                </div>
+            `).join('');
+        } else {
+            pinArea.classList.add('hidden');
+        }
+    }
+
+    function toggleActions(idx) {
+        document.querySelectorAll('.msg-actions').forEach((el, i) => {
+            if(i !== idx) el.classList.remove('show');
+        });
+        document.getElementById(`actions-${idx}`).classList.toggle('show');
+    }
+
+    function togglePin(idx) {
+        const m = state.chat[idx];
+        const id = m.time + m.name;
+        if (state.pinnedIds.includes(id)) {
+            state.pinnedIds = state.pinnedIds.filter(pid => pid !== id);
+        } else {
+            state.pinnedIds.push(id);
+        }
+        localStorage.setItem('pinned_msgs', JSON.stringify(state.pinnedIds));
+        renderChat();
+        renderPinned();
+    }
+
+    function editMsg(idx) {
+        const m = state.chat[idx];
+        state.editIndex = idx;
+        document.getElementById('chat-input').value = m.message;
+        document.getElementById('chat-input').focus();
+        document.getElementById('btn-send').innerHTML = '💾';
+    }
+
+    async function deleteMsg(idx) {
+        const m = state.chat[idx];
+        if (!confirm("Hapus pesan ini secara permanen dari server?")) return;
+        
+        showLoading(true);
+        try {
+            const response = await fetch(WEB_APP_URL, { 
+                method: 'POST', 
+                body: JSON.stringify({ 
+                    action: 'deleteChat', 
+                    payload: { 
+                        name: m.name, 
+                        time: m.time, 
+                        message: m.message 
+                    } 
+                }) 
+            });
+            const res = await response.json();
+            if(res.status === 'success') {
+                state.chat.splice(idx, 1);
+                renderChat();
+                showAlert("Berhasil", "Pesan telah dihapus.");
+            }
+        } catch (e) { 
+            showAlert("Eror", "Gagal menghapus pesan di server.", "error"); 
+        } finally {
+            showLoading(false);
+        }
+    }
+
+    function showLoading(s) {
+        document.getElementById('btn-send').disabled = s;
+        if(s) document.getElementById('btn-send').style.opacity = '0.5';
+        else document.getElementById('btn-send').style.opacity = '1';
+    }
+
+    async function sendChatMessage() {
+        const input = document.getElementById('chat-input');
+        const msg = input.value.trim();
+        if(!msg || !state.user) return;
+
+        if (state.editIndex !== null) {
+            const m = state.chat[state.editIndex];
+            showLoading(true);
+            try {
+                await fetch(WEB_APP_URL, { 
+                    method: 'POST', 
+                    body: JSON.stringify({ 
+                        action: 'editChat', 
+                        payload: { name: m.name, time: m.time, oldMessage: m.message, newMessage: msg } 
+                    }) 
+                });
+                state.chat[state.editIndex].message = msg;
+                state.editIndex = null;
+                document.getElementById('btn-send').innerHTML = '<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 12h14M12 5l7 7-7 7"></path></svg>';
+                input.value = '';
+                renderChat();
+                showAlert("Berhasil", "Pesan telah diperbarui.");
+            } catch (e) {
+                showAlert("Eror", "Gagal mengedit pesan.", "error");
+            } finally {
+                showLoading(false);
+            }
+            return;
+        }
+
+        const msgTime = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+        const tempId = msgTime + state.user + msg;
+        
+        const payload = {
+            name: state.user,
+            message: msg,
+            time: msgTime
+        };
+
+        // Optimistic UI: Centang satu
+        state.pendingIds.push(tempId);
+        state.chat.push(payload);
+        renderChat();
+        input.value = '';
+
+        try {
+            await fetch(WEB_APP_URL, { method: 'POST', body: JSON.stringify({ action: 'saveChat', payload }) });
+            // Konfirmasi: Centang dua
+            state.pendingIds = state.pendingIds.filter(id => id !== tempId);
+            fetchData();
+        } catch (e) { 
+            showAlert("Eror", "Gagal kirim pesan.", "error"); 
+        }
+    }
+
+    function openReportModal() { document.getElementById('modal-report').style.display = 'flex'; }
+    function closeReportModal() { document.getElementById('modal-report').style.display = 'none'; }
+
+    async function submitReport() {
+        const n = document.getElementById('rep-name').value.trim();
+        const c = document.getElementById('rep-cond').value.trim();
+        const m = document.getElementById('rep-med').value.trim();
+        const t = document.getElementById('rep-time').value;
+
+        if(!n || !c || !m || !t) return showAlert("Data Kosong", "Isi semua detail laporan.", "error");
+
+        const msg = `📌 *LAPORAN PASIEN*\n👤 Nama: ${n}\n🌡️ Kondisi: ${c}\n💊 Obat: ${m}\n⏰ Jam Minum: ${t}`;
+        document.getElementById('chat-input').value = msg;
+        sendChatMessage();
+        closeReportModal();
+        
+        ['rep-name', 'rep-cond', 'rep-med', 'rep-time'].forEach(id => document.getElementById(id).value = '');
+    }
+
+    document.getElementById('chat-input').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendChatMessage();
+    });
+
+    window.onload = () => {
+        if (checkSession()) {
+            fetchData();
+            setInterval(fetchData, 8000);
+        }
+    };
+</script>
+
+</body>
+</html>
