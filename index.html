@@ -134,13 +134,13 @@
     <span class="text-[8px] font-black uppercase text-teal-800 tracking-widest">Sinkronisasi</span>
 </div>
 
-<!-- GLOBAL LOADING (Hanya untuk aksi berat) -->
+<!-- GLOBAL LOADING -->
 <div id="loading-screen" class="hidden fixed inset-0 bg-white/80 backdrop-blur-md z-[3000] flex flex-col items-center justify-center">
     <div class="relative">
         <div class="w-16 h-16 border-4 border-teal-100 rounded-full"></div>
         <div class="w-16 h-16 border-4 border-teal-600 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
     </div>
-    <p class="mt-6 text-[10px] font-black uppercase tracking-[0.3em] text-teal-800 animate-pulse">Memproses...</p>
+    <p class="mt-6 text-[10px] font-black uppercase tracking-[0.3em] text-teal-800 animate-pulse">Memvalidasi...</p>
 </div>
 
 <!-- SUCCESS MODAL POP-UP -->
@@ -526,18 +526,43 @@
 
     async function initiateScan() {
         if (!state.user) return showAlert("Akses Ditolak", "Identitas belum diverifikasi", "error");
+        
+        // 1. Verifikasi GPS Awal
         if (state.data.config && state.data.config.gpsLock === true) {
             checkGPS();
-            if (!state.isWithinRadius) { return showAlert("Lokasi Tidak Valid", `Anda berada ${Math.round(state.distance)}m diluar area Puskesmas.`, "error"); }
+            if (!state.isWithinRadius) { 
+                playFeedback("Maaf, lokasi Anda tidak valid.");
+                return showAlert("Lokasi Tidak Valid", `Anda berada ${Math.round(state.distance)}m diluar area Puskesmas.`, "error"); 
+            }
         }
+
+        // 2. Verifikasi Duplikasi (Cek apakah sudah scan shift ini hari ini)
+        const logicalDate = getLogicalDate();
+        const info = getShiftInfo();
+        const isAlreadyScanned = state.data.logs.some(l => l.name === state.user && l.date === logicalDate && l.shift === info.label);
+        
+        if (isAlreadyScanned) {
+            playFeedback("Anda sudah melakukan absen untuk shift ini.");
+            return showAlert("Sudah Absen", `Anda sudah tercatat masuk untuk Shift ${info.label} hari ini.`, "error");
+        }
+
         document.getElementById('modal-scanner').style.display = 'flex';
         if (state.scanner) { try { await state.scanner.stop(); } catch(e) {} state.scanner = null; }
+        
         state.scanner = new Html5Qrcode("qr-reader");
         const dynamicSecret = (state.data.config && state.data.config.qrData) || CONFIG.DEFAULT_QR;
+
         try {
             await state.scanner.start({ facingMode: "environment" }, { fps: 20, qrbox: (w, h) => { let m = Math.min(w, h); let q = Math.floor(m * 0.7); return { width: q, height: q }; }, aspectRatio: 1.0 },
                 async (txt) => {
                     if (txt === dynamicSecret) {
+                        // 3. Verifikasi GPS Final tepat saat scan berhasil
+                        if (state.data.config && state.data.config.gpsLock === true && !state.isWithinRadius) {
+                             playFeedback("Akses ditolak. Lokasi Anda berubah.");
+                             showAlert("Lokasi Berubah", "Lokasi tidak valid saat pemindaian.", "error");
+                             return;
+                        }
+
                         await state.scanner.stop();
                         state.scanner = null;
                         closeScanner();
@@ -559,7 +584,6 @@
         if (state.scanner) { state.scanner.stop().then(() => { state.scanner = null; }).catch(() => {}); }
     }
 
-    // --- Success Presence Modal Logic ---
     function showSuccessModal(name, time, shift) {
         if (state.data.config.popup === false) return;
         document.getElementById('success-nurse-name').innerText = name;
@@ -576,7 +600,19 @@
         toggleLoading(true);
         const shift = getShiftInfo();
         const now = new Date();
+        const logicalDate = getLogicalDate();
         const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+
+        // Validasi Jadwal (Cek apakah perawat memang dijadwalkan shift ini)
+        const day = parseInt(logicalDate.split('/')[0]);
+        const sData = state.data.schedule[state.user] || state.data.schedule[state.user.toUpperCase()];
+        const scheduledShift = sData ? (sData[day] || sData[String(day)]) : null;
+        
+        let feedbackMsg = `Presensi berhasil. Selamat bertugas ${state.user}`;
+        if (scheduledShift && scheduledShift !== shift.code) {
+            feedbackMsg = `Peringatan, Anda absen di luar jadwal seharusnya. Namun data tetap disimpan. Selamat bertugas ${state.user}`;
+        }
+
         try {
             const resp = await fetch(CONFIG.WEB_APP_URL, {
                 method: 'POST',
@@ -584,7 +620,7 @@
                     action: 'saveScan',
                     payload: {
                         name: state.user,
-                        date: getLogicalDate(now),
+                        date: logicalDate,
                         shift: shift.label,
                         time: timeStr
                     }
@@ -592,7 +628,7 @@
             });
             const res = await resp.json();
             if (res.status === 'success') {
-                playFeedback(`Presensi berhasil. Selamat bertugas ${state.user}`);
+                playFeedback(feedbackMsg);
                 showSuccessModal(state.user, timeStr, shift.label);
                 fetchData(true);
             }
@@ -613,18 +649,13 @@
     function handleDevFeatures() { showAlert("Pengembangan", "Fitur Koordinasi Chat sedang dalam tahap integrasi."); }
 
     window.onload = () => {
-        // Background Sync pertama kali buka aplikasi
         fetchData(true);
-        
         setInterval(() => {
             const now = new Date();
             document.getElementById('time-display').innerText = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             document.getElementById('date-display').innerText = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });
         }, 1000);
-        
-        // Auto Sync setiap 60 detik di background
         setInterval(() => fetchData(true), 60000);
-        
         setInterval(() => { checkGPS(); }, 15000);
     };
 </script>
