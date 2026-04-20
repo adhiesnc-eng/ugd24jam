@@ -5,236 +5,169 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Sistem Presensi Perawat - Puskesmas Sampanahan</title>
     
-    <!-- PWA & Mobile Optimization -->
     <meta name="theme-color" content="#0d9488">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
-    <!-- External Assets -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] },
+                    colors: {
+                        primary: { DEFAULT: '#0d9488', dark: '#0f766e' },
+                    },
+                    animation: {
+                        'shimmer': 'shimmer 2s infinite linear',
+                        'laser': 'laser 2s infinite ease-in-out',
+                    },
+                    keyframes: {
+                        shimmer: { '0%': { transform: 'translateX(-100%)' }, '100%': { transform: 'translateX(100%)' } },
+                        laser: { '0%, 100%': { top: '0%' }, '50%': { top: '100%' } }
+                    }
+                }
+            }
+        }
+    </script>
+
     <style>
-        :root {
-            --primary: #0d9488;
-            --primary-dark: #0f766e;
-            --secondary: #6366f1;
-            --accent: #f43f5e;
-            --bg-soft: #f8fafc;
-        }
+        :root { --sat: env(safe-area-inset-top); --sab: env(safe-area-inset-bottom); }
+        body { -webkit-user-select: none; user-select: none; overflow: hidden; }
+        
+        .glass-effect { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+        .bg-mesh { background: radial-gradient(at 0% 0%, #f0fdfa 0px, transparent 50%), radial-gradient(at 100% 0%, #f1f5f9 0px, transparent 50%); }
+        .dark .bg-mesh { background: radial-gradient(at 0% 0%, #042f2e 0px, transparent 50%), radial-gradient(at 100% 100%, #0f172a 0px, transparent 50%); }
 
-        body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: #f1f5f9;
-            height: 100dvh;
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            overflow: hidden;
-            -webkit-user-select: none;
-            user-select: none;
-        }
-
-        .app-container { 
-            width: 100%;
-            max-width: 480px; 
-            background: #ffffff; 
-            height: 100dvh; 
-            position: relative; 
-            display: flex; 
-            flex-direction: column;
-            box-shadow: 0 0 40px rgba(0,0,0,0.05);
-        }
-
-        .main-scroll {
-            flex: 1; 
-            overflow-y: auto; 
-            scroll-behavior: smooth;
-            -webkit-overflow-scrolling: touch;
-            padding-bottom: 120px;
-        }
+        .app-container { width: 100%; max-width: 480px; height: 100dvh; display: flex; flex-direction: column; }
+        .main-scroll { flex: 1; overflow-y: auto; scroll-behavior: smooth; padding-bottom: 140px; }
         .main-scroll::-webkit-scrollbar { display: none; }
 
-        .view-section { display: none; }
-        .view-section.active { 
-            display: block; 
-            animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); 
-        }
+        /* Rekap Table Styling */
+        .rekap-wrapper { width: 100%; overflow-x: auto; border-radius: 1.5rem; }
+        .rekap-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.7rem; }
+        .rekap-table th { padding: 12px 8px; text-align: center; font-weight: 800; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+        .rekap-table td { padding: 10px 4px; text-align: center; border-bottom: 1px solid #f1f5f9; font-weight: 700; }
+        .dark .rekap-table td { border-bottom: 1px solid #1e293b; }
         
-        @keyframes slideUp { 
-            from { opacity: 0; transform: translateY(20px); } 
-            to { opacity: 1; transform: translateY(0); } 
-        }
-
-        .btn-press { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
-        .btn-press:active { transform: scale(0.95); opacity: 0.8; }
-
-        .rekap-table { width: 100%; border-collapse: collapse; font-size: 0.7rem; }
-        .rekap-table th { background: #f8fafc; padding: 10px; text-align: center; font-weight: 800; color: #64748b; text-transform: uppercase; }
-        .rekap-table td { padding: 10px 6px; text-align: center; border-top: 1px solid #f1f5f9; font-weight: 600; }
-        .sticky-left { position: sticky; left: 0; background: white; z-index: 10; border-right: 1px solid #f1f5f9; min-width: 100px; text-align: left !important; padding-left: 12px !important; }
+        .sticky-left { position: sticky; left: 0; z-index: 20; min-width: 90px; text-align: left !important; padding-left: 12px !important; border-right: 1px solid #f1f5f9; box-shadow: 4px 0 8px rgba(0,0,0,0.02); }
+        .dark .sticky-left { border-right: 1px solid #1e293b; }
+        .sticky-right { position: sticky; right: 0; z-index: 20; min-width: 45px; font-weight: 900 !important; border-left: 1px solid #f1f5f9; box-shadow: -4px 0 8px rgba(0,0,0,0.02); }
         
-        .code-P { color: #0d9488; background: #f0fdfa; border-radius: 4px; }
-        .code-S { color: #d97706; background: #fffbeb; border-radius: 4px; }
-        .code-M { color: #2563eb; background: #eff6ff; border-radius: 4px; }
+        .code-P { color: #0d9488; background: #f0fdfa; }
+        .code-S { color: #d97706; background: #fffbeb; }
+        .code-M { color: #2563eb; background: #eff6ff; }
+        
+        /* Accordion Schedule */
+        .schedule-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
+        .schedule-card.open .schedule-content { max-height: 200px; padding-top: 1rem; }
+        .schedule-card.open .chevron { transform: rotate(180deg); }
 
-        .modal-overlay {
-            position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6);
-            backdrop-filter: blur(4px); z-index: 1000;
-            display: none; align-items: flex-end; justify-content: center;
-        }
-        .modal-sheet {
-            background: white; width: 100%; max-width: 480px;
-            border-radius: 2rem 2rem 0 0; padding-bottom: env(safe-area-inset-bottom);
-            animation: sheetUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        @keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-
-        /* Full Screen Success Modal */
-        #modal-success-presence {
-            position: fixed; inset: 0; background: white; z-index: 2000;
-            display: none; flex-direction: column; align-items: center; justify-content: center;
-            text-align: center; padding: 2rem;
-            animation: fadeIn 0.5s ease;
-        }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-        #alert-box {
-            position: fixed; top: 2rem; left: 50%; transform: translateX(-50%) translateY(-150%);
-            width: 90%; max-width: 400px; z-index: 2000; transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
-        }
-        #alert-box.show { transform: translateX(-50%) translateY(0); }
-
-        /* Background Sync Indicator */
-        #sync-status {
-            position: fixed; top: 1rem; right: 1rem; z-index: 500;
-            opacity: 0; transition: opacity 0.3s;
-        }
-        #sync-status.active { opacity: 1; }
+        /* Laser Scanner */
+        .laser-line { position: absolute; left: 0; right: 0; height: 3px; background: #22c55e; box-shadow: 0 0 15px #22c55e, 0 0 30px #22c55e; animation: laser 2.5s infinite linear; z-index: 10; }
     </style>
 </head>
-<body>
+<body class="bg-slate-50 dark:bg-slate-950 transition-colors duration-500">
 
-<!-- ALERT SYSTEM -->
-<div id="alert-box">
-    <div id="alert-content" class="bg-white rounded-2xl p-4 shadow-2xl flex items-center gap-4 border border-slate-100">
-        <div id="alert-icon-bg" class="w-12 h-12 rounded-full flex items-center justify-center text-xl">✓</div>
-        <div class="flex-1">
-            <h4 id="alert-title" class="text-xs font-extrabold uppercase tracking-widest text-slate-900">Notifikasi</h4>
-            <p id="alert-msg" class="text-[10px] font-bold text-slate-500 mt-0.5"></p>
-        </div>
+<!-- SHIMMER LOADING -->
+<div id="loading-overlay" class="fixed inset-0 z-[5000] bg-white dark:bg-slate-950 flex flex-col items-center justify-center transition-opacity duration-500">
+    <div class="relative w-24 h-24">
+        <div class="absolute inset-0 border-4 border-teal-500/20 rounded-3xl"></div>
+        <div class="absolute inset-0 border-4 border-teal-500 border-t-transparent rounded-3xl animate-spin"></div>
+        <div class="absolute inset-4 bg-teal-500/10 rounded-2xl animate-pulse flex items-center justify-center text-2xl">👩‍⚕️</div>
     </div>
-</div>
-
-<!-- SYNC INDICATOR (Background) -->
-<div id="sync-status" class="bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full shadow-sm border border-slate-100 flex items-center gap-2">
-    <div class="w-2 h-2 bg-teal-500 rounded-full animate-pulse"></div>
-    <span class="text-[8px] font-black uppercase text-teal-800 tracking-widest">Sinkronisasi</span>
-</div>
-
-<!-- GLOBAL LOADING -->
-<div id="loading-screen" class="hidden fixed inset-0 bg-white/80 backdrop-blur-md z-[3000] flex flex-col items-center justify-center">
-    <div class="relative">
-        <div class="w-16 h-16 border-4 border-teal-100 rounded-full"></div>
-        <div class="w-16 h-16 border-4 border-teal-600 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
+    <div class="mt-8 overflow-hidden rounded-full w-48 h-1 bg-slate-100 dark:bg-slate-800 relative">
+        <div class="absolute inset-0 bg-gradient-to-r from-teal-500 to-emerald-400 animate-shimmer" style="width: 50%;"></div>
     </div>
-    <p class="mt-6 text-[10px] font-black uppercase tracking-[0.3em] text-teal-800 animate-pulse">Memvalidasi...</p>
+    <p class="mt-4 text-[10px] font-black uppercase tracking-[0.4em] text-teal-600 animate-pulse">Menghubungkan</p>
 </div>
 
-<!-- SUCCESS MODAL POP-UP -->
-<div id="modal-success-presence">
-    <div class="w-24 h-24 bg-teal-50 text-teal-600 rounded-full flex items-center justify-center text-5xl mb-6 animate-bounce">✓</div>
-    <h2 class="text-2xl font-black text-slate-800 uppercase tracking-tight">Presensi Berhasil!</h2>
-    <p id="success-nurse-name" class="text-lg font-bold text-teal-600 mt-2 uppercase tracking-widest">NAMA PERAWAT</p>
-    <div class="mt-8 bg-slate-50 p-6 rounded-[2rem] border border-slate-100 w-full max-w-xs">
-        <p id="success-time" class="text-3xl font-black text-slate-800 tabular-nums">00:00</p>
-        <p id="success-shift" class="text-[10px] font-bold text-slate-400 uppercase mt-1 tracking-[0.2em]">SHIFT PAGI</p>
-    </div>
-    <button onclick="closeSuccessModal()" class="mt-12 w-full max-w-xs bg-slate-900 text-white py-5 rounded-2xl font-black text-xs uppercase tracking-[0.3em] btn-press">Selesai</button>
-</div>
+<!-- TOP STATUS BAR -->
+<div class="fixed top-0 left-0 right-0 h-[var(--sat)] bg-teal-600 z-[1000]"></div>
 
-<div class="app-container">
-    <div class="main-scroll" id="scroll-root">
-        <header id="app-header" class="relative bg-teal-600 pt-14 pb-16 px-6 overflow-hidden">
-            <div class="absolute top-0 right-0 w-64 h-64 bg-teal-500/30 rounded-full -mr-20 -mt-20 blur-3xl"></div>
-            <div class="absolute bottom-0 left-0 w-40 h-40 bg-teal-700/30 rounded-full -ml-10 -mb-10 blur-2xl"></div>
+<div class="app-container mx-auto">
+    <div class="main-scroll bg-mesh" id="scroll-root">
+        
+        <!-- HEADER -->
+        <header class="relative bg-teal-600 dark:bg-teal-900 px-6 pt-12 pb-16 rounded-b-[3rem] overflow-hidden shadow-2xl">
+            <div class="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl"></div>
             <div class="relative z-10 flex justify-between items-start">
-                <div>
-                    <span class="bg-white/20 text-white text-[8px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full backdrop-blur-md border border-white/10">
-                        Puskesmas Sampanahan
-                    </span>
-                    <h1 id="user-greeting" class="text-2xl font-extrabold text-white mt-4 tracking-tight">Selamat Datang</h1>
-                    <div class="flex items-center gap-2 mt-2">
-                        <div id="gps-status-dot" class="w-2 h-2 rounded-full bg-slate-300"></div>
-                        <span id="gps-status-text" class="text-[9px] font-bold text-white/70 uppercase tracking-widest">Inisialisasi GPS...</span>
+                <div class="space-y-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-white/20 glass-effect rounded-2xl flex items-center justify-center text-xl">🏥</div>
+                        <div>
+                            <p class="text-[8px] font-black text-teal-100 uppercase tracking-widest leading-none">PKM Sampanahan</p>
+                            <p class="text-[10px] font-bold text-white uppercase tracking-tighter">Nurse Attendance</p>
+                        </div>
+                    </div>
+                    <h1 id="user-greeting" class="text-3xl font-extrabold text-white leading-tight">Halo!</h1>
+                    <div id="gps-badge" class="inline-flex items-center gap-2 bg-black/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
+                        <div id="gps-dot" class="w-2 h-2 rounded-full bg-slate-400"></div>
+                        <span id="gps-text" class="text-[8px] font-bold text-white uppercase tracking-wider">Mencari GPS...</span>
                     </div>
                 </div>
-                <div class="text-right">
-                    <h2 id="time-display" class="text-3xl font-black text-white tabular-nums tracking-tighter">00:00</h2>
-                    <p id="date-display" class="text-[9px] font-bold text-teal-100 uppercase mt-1">---</p>
-                </div>
-            </div>
-            <div class="mt-8 flex gap-2">
-                <div class="bg-white/10 backdrop-blur-md border border-white/20 px-4 py-2 rounded-2xl flex items-center gap-3">
-                    <span id="shift-icon" class="text-lg"></span>
-                    <div class="leading-none">
-                        <p class="text-[8px] font-black text-teal-100 uppercase tracking-widest mb-1">Shift Aktif</p>
-                        <p id="shift-name" class="text-[10px] font-extrabold text-white uppercase">Pagi</p>
+                <div class="text-right flex flex-col items-end gap-3">
+                    <button onclick="toggleDarkMode()" class="w-10 h-10 bg-white/10 glass-effect rounded-2xl flex items-center justify-center text-white border border-white/20 transition-transform active:scale-90">
+                        <span id="theme-icon">🌙</span>
+                    </button>
+                    <div>
+                        <h2 id="time-display" class="text-3xl font-black text-white tabular-nums tracking-tighter leading-none">00:00</h2>
+                        <p id="date-display" class="text-[9px] font-bold text-teal-100 uppercase mt-1 tracking-widest opacity-80">---</p>
                     </div>
                 </div>
             </div>
         </header>
 
-        <main id="view-home" class="view-section active -mt-8 px-5 space-y-6">
-            <section id="card-auth" class="bg-white rounded-[2.5rem] p-8 shadow-xl shadow-slate-200/50 border border-slate-50 text-center relative z-20">
-                <div class="w-20 h-20 bg-teal-50 text-teal-600 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-6 shadow-inner">👩‍⚕️</div>
-                <h3 class="font-extrabold text-slate-800 text-sm uppercase tracking-tight">Verifikasi Identitas</h3>
-                <p class="text-slate-400 text-[10px] mt-2 mb-8 font-bold leading-relaxed">Silakan pilih nama Anda untuk mengakses <br> fitur presensi dan rekapitulasi.</p>
+        <!-- VIEW: HOME -->
+        <main id="view-home" class="px-6 -mt-8 space-y-8">
+            <!-- LOGIN CARD -->
+            <section id="card-auth" class="bg-white/80 dark:bg-slate-900/80 glass-effect p-8 rounded-[2.5rem] shadow-xl border border-white/20 dark:border-slate-800/50 text-center relative z-20">
+                <div class="w-16 h-16 bg-teal-500/10 dark:bg-teal-500/20 text-teal-600 rounded-[1.5rem] flex items-center justify-center text-4xl mx-auto mb-6 shadow-inner animate-bounce">👩‍⚕️</div>
+                <h3 class="font-extrabold text-slate-800 dark:text-slate-100 text-sm uppercase tracking-widest mb-1">Verifikasi Akun</h3>
+                <p class="text-[10px] text-slate-400 font-bold uppercase mb-8">Pilih nama perawat untuk memulai</p>
                 <div class="space-y-4">
-                    <div class="relative group">
-                        <select id="input-user" class="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-2xl text-xs font-black outline-none appearance-none text-center focus:border-teal-500 transition-all cursor-pointer">
-                            <option value="">Memuat Daftar Perawat...</option>
-                        </select>
-                        <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"></path></svg>
-                        </div>
-                    </div>
-                    <button onclick="handleLogin()" class="w-full bg-teal-600 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-teal-600/30 btn-press">
-                        Aktifkan Sesi
-                    </button>
+                    <select id="input-user" class="w-full bg-slate-50/50 dark:bg-slate-800/50 border-2 border-slate-100 dark:border-slate-700 p-4 rounded-2xl text-xs font-black outline-none appearance-none text-center focus:border-teal-500 transition-all dark:text-white">
+                        <option value="">Memuat Daftar...</option>
+                    </select>
+                    <button onclick="handleLogin()" class="w-full bg-gradient-to-r from-teal-600 to-emerald-500 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-teal-500/30 transition-all active:scale-95">Masuk Sesi</button>
                 </div>
             </section>
 
             <div id="dashboard-content" class="hidden space-y-8">
+                <!-- ACTIONS -->
                 <div class="grid grid-cols-2 gap-4">
-                    <button onclick="logout()" class="bg-white border border-slate-100 p-5 rounded-3xl flex flex-col items-center gap-3 shadow-sm btn-press">
-                        <div class="w-10 h-10 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                        </div>
-                        <span class="text-[9px] font-black uppercase text-slate-500 tracking-widest">Logout Sesi</span>
+                    <button onclick="logout()" class="bg-white/50 dark:bg-slate-900/50 glass-effect border border-white/20 dark:border-slate-800/50 p-6 rounded-[2rem] flex flex-col items-center gap-3 shadow-sm active:scale-95">
+                        <div class="w-10 h-10 bg-rose-500/10 text-rose-500 rounded-xl flex items-center justify-center text-xl">🚪</div>
+                        <span class="text-[9px] font-black uppercase text-slate-400 tracking-widest">Logout</span>
                     </button>
-                    <button onclick="showView('rekap')" class="bg-white border border-slate-100 p-5 rounded-3xl flex flex-col items-center gap-3 shadow-sm btn-press">
-                        <div class="w-10 h-10 bg-teal-50 text-teal-600 rounded-xl flex items-center justify-center">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-                        </div>
-                        <span class="text-[9px] font-black uppercase text-slate-500 tracking-widest">Lihat Rekap</span>
+                    <button onclick="showView('rekap')" class="bg-white/50 dark:bg-slate-900/50 glass-effect border border-white/20 dark:border-slate-800/50 p-6 rounded-[2rem] flex flex-col items-center gap-3 shadow-sm active:scale-95">
+                        <div class="w-10 h-10 bg-teal-500/10 text-teal-500 rounded-xl flex items-center justify-center text-xl">📊</div>
+                        <span class="text-[9px] font-black uppercase text-slate-400 tracking-widest">Rekap</span>
                     </button>
                 </div>
+
+                <!-- JADWAL TUGAS (CLICK TO SHOW) -->
                 <section>
-                    <div class="flex justify-between items-center mb-4 px-2">
-                        <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">📅 Jadwal Terencana</h3>
-                        <span id="logical-date-label" class="text-[8px] font-bold text-teal-600 bg-teal-50 px-2 py-0.5 rounded-lg">--/--/----</span>
+                    <div class="flex justify-between items-center mb-5 px-2">
+                        <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">📅 Jadwal Tugas</h3>
+                        <span id="logical-date-label" class="text-[9px] font-bold text-teal-600 dark:text-teal-400 bg-teal-500/10 px-3 py-1 rounded-full border border-teal-500/20 uppercase tracking-widest">--/--/----</span>
                     </div>
-                    <div id="schedule-container" class="space-y-3"></div>
+                    <div id="schedule-container" class="space-y-4"></div>
+                    <p class="text-center text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-4">Ketuk kartu shift untuk melihat perawat</p>
                 </section>
-                <section>
-                    <div class="flex justify-between items-center mb-4 px-2">
-                        <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">📑 Log Kehadiran Hari Ini</h3>
-                        <div class="flex items-center gap-2">
-                            <span class="w-1.5 h-1.5 bg-rose-500 rounded-full animate-ping"></span>
-                            <span class="text-[8px] font-black text-rose-500 uppercase tracking-widest">Live</span>
+
+                <!-- LOG ABSEN HARIAN -->
+                <section class="pb-10">
+                    <div class="flex justify-between items-center mb-5 px-2">
+                        <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">📑 Log Absen Harian</h3>
+                        <div class="flex items-center gap-2 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+                            <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                            <span class="text-[8px] font-black text-emerald-500 uppercase tracking-widest">Update</span>
                         </div>
                     </div>
                     <div id="live-log-container" class="space-y-3"></div>
@@ -242,71 +175,105 @@
             </div>
         </main>
 
-        <main id="view-rekap" class="view-section px-5 space-y-8 pt-8">
-            <div class="flex justify-between items-end mb-2">
+        <!-- VIEW: REKAP -->
+        <main id="view-rekap" class="view-section hidden px-6 space-y-8 pt-10">
+            <div class="flex justify-between items-end">
                 <div>
-                    <h2 class="text-xl font-black text-slate-800 tracking-tight">Arsip Laporan</h2>
-                    <p id="rekap-month-label" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Januari 2024</p>
+                    <h2 class="text-2xl font-black text-slate-800 dark:text-white tracking-tighter">Rekapitulasi</h2>
+                    <p id="rekap-month-label" class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">---</p>
                 </div>
-                <button onclick="exportToExcel()" class="bg-slate-900 text-white p-3 rounded-2xl shadow-lg btn-press">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                <button onclick="exportToExcel()" class="bg-slate-900 dark:bg-teal-600 text-white p-4 rounded-2xl shadow-xl active:scale-90 transition-all">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                 </button>
             </div>
-            <div class="table-wrapper bg-white shadow-xl shadow-slate-200/50">
-                <div id="rekap-table-container" class="min-w-full"></div>
+
+            <div class="relative group">
+                <input type="text" id="rekap-search" oninput="renderRekap()" placeholder="Cari perawat..." class="w-full bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-5 pl-14 rounded-[1.5rem] text-xs font-bold outline-none focus:ring-4 focus:ring-teal-500/10 shadow-sm transition-all dark:text-white">
+                <div class="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </div>
+            </div>
+
+            <div class="rekap-wrapper bg-white/50 dark:bg-slate-900/50 glass-effect border border-white/20 dark:border-slate-800 shadow-2xl">
+                <div id="rekap-table-container"></div>
+            </div>
+
+            <div class="bg-white/50 dark:bg-slate-900/50 glass-effect p-6 rounded-[2.5rem] border border-white/20 dark:border-slate-800/50 space-y-6 text-center">
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="p-4 bg-teal-500/10 rounded-2xl"><span class="text-sm font-black text-teal-600">P</span><p class="text-[7px] font-bold text-teal-800 uppercase tracking-widest mt-1">Pagi</p></div>
+                    <div class="p-4 bg-amber-500/10 rounded-2xl"><span class="text-sm font-black text-amber-600">S</span><p class="text-[7px] font-bold text-amber-800 uppercase tracking-widest mt-1">Siang</p></div>
+                    <div class="p-4 bg-blue-500/10 rounded-2xl"><span class="text-sm font-black text-blue-600">M</span><p class="text-[7px] font-bold text-blue-800 uppercase tracking-widest mt-1">Malam</p></div>
+                </div>
+                <p class="text-[9px] font-bold text-slate-400 italic uppercase tracking-widest">Geser tabel ke kanan untuk melihat total →</p>
             </div>
         </main>
     </div>
 
-    <nav class="fixed bottom-0 left-0 right-0 max-w-[480px] mx-auto z-[100] px-6 pb-8 pt-4 bg-white/80 backdrop-blur-xl border-t border-slate-100 rounded-t-[2.5rem] shadow-[0_-20px_40px_rgba(0,0,0,0.03)]">
-        <div class="flex items-center gap-4">
-            <button onclick="showView('home')" id="nav-home" class="flex-1 py-4 flex flex-col items-center gap-1 rounded-2xl transition-all text-teal-600 bg-teal-50">
+    <!-- NAVIGATION -->
+    <nav class="fixed bottom-0 left-0 right-0 max-w-[480px] mx-auto z-[2000] px-6 pb-[calc(1.5rem+var(--sab))] pt-4">
+        <div class="bg-white/70 dark:bg-slate-900/80 glass-effect border border-white/30 dark:border-slate-800/50 rounded-[2.5rem] p-3 flex items-center gap-4 shadow-xl">
+            <button onclick="showView('home')" id="nav-home" class="flex-1 py-4 flex flex-col items-center gap-1 rounded-[1.5rem] text-teal-600 bg-teal-500/10 transition-all">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
-                <span class="text-[8px] font-black uppercase tracking-widest">Home</span>
+                <span class="text-[8px] font-black uppercase tracking-widest">Beranda</span>
             </button>
-            <button onclick="initiateScan()" class="bg-teal-600 text-white p-5 rounded-3xl shadow-xl shadow-teal-600/30 -mt-12 btn-press border-4 border-white">
-                <div class="flex flex-col items-center gap-1">
-                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
-                </div>
+            
+            <button onclick="initiateScan()" class="bg-gradient-to-br from-teal-500 to-emerald-600 text-white p-6 rounded-[2rem] shadow-xl shadow-teal-500/40 -mt-16 border-4 border-white dark:border-slate-950 active:scale-90 transition-all">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
             </button>
-            <button onclick="handleDevFeatures()" class="flex-1 py-4 flex flex-col items-center gap-1 rounded-2xl transition-all text-slate-400">
+
+            <button onclick="handleDevFeatures()" class="flex-1 py-4 flex flex-col items-center gap-1 rounded-[1.5rem] text-slate-400 transition-all">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
-                <span class="text-[8px] font-black uppercase tracking-widest">Chat</span>
+                <span class="text-[8px] font-black uppercase tracking-widest">Bantuan</span>
             </button>
         </div>
     </nav>
 </div>
 
 <!-- SCANNER MODAL -->
-<div id="modal-scanner" class="modal-overlay" onclick="if(event.target === this) closeScanner()">
-    <div class="modal-sheet">
-        <div class="p-6 border-b border-slate-50 flex justify-between items-center">
-            <div>
-                <h4 class="text-xs font-black uppercase tracking-[0.2em] text-slate-800">Scan QR Presensi</h4>
-                <p class="text-[9px] font-bold text-slate-400 mt-0.5">Arahkan kamera ke kode QR di meja piket</p>
-            </div>
-            <button onclick="closeScanner()" class="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-500">✕</button>
+<div id="modal-scanner" class="fixed inset-0 z-[6000] hidden flex-col bg-black/90 backdrop-blur-2xl">
+    <div class="px-6 pt-12 pb-6 flex justify-between items-center text-white">
+        <div>
+            <h4 class="font-black text-lg tracking-tighter uppercase">Scan Presensi</h4>
+            <p class="text-[9px] text-teal-400 font-bold uppercase tracking-widest">Arahkan kamera ke Kode QR</p>
         </div>
-        <div class="p-6">
-            <div class="bg-slate-900 aspect-square rounded-[2rem] overflow-hidden relative border-4 border-slate-100 shadow-inner">
-                <div id="qr-reader" class="w-full h-full"></div>
-                <div class="absolute inset-0 border-[40px] border-slate-900/50 pointer-events-none flex items-center justify-center">
-                    <div class="w-full h-full border-2 border-teal-500 rounded-2xl shadow-[0_0_0_999px_rgba(15,23,42,0.4)] relative">
-                        <div class="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-teal-400 rounded-tl-lg"></div>
-                        <div class="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-teal-400 rounded-tr-lg"></div>
-                        <div class="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-teal-400 rounded-bl-lg"></div>
-                        <div class="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-teal-400 rounded-br-lg"></div>
-                    </div>
-                </div>
-            </div>
-            <div class="mt-6 bg-teal-50 p-4 rounded-2xl flex items-center gap-4">
-                <div class="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-teal-600 shadow-sm">📍</div>
-                <p class="text-[9px] font-bold text-teal-800 leading-tight text-justify">
-                    Sistem memverifikasi lokasi GPS secara real-time. Pastikan izin lokasi aktif.
-                </p>
+        <button onclick="closeScanner()" class="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">✕</button>
+    </div>
+    
+    <div class="flex-1 flex flex-col items-center justify-center p-6">
+        <div class="relative">
+            <div id="qr-reader" class="w-[280px] h-[280px] bg-slate-950 rounded-[3rem] overflow-hidden border-4 border-white/20"></div>
+            <div class="absolute inset-0 pointer-events-none rounded-[3rem] overflow-hidden">
+                <div class="laser-line"></div>
+                <div class="absolute top-8 left-8 w-10 h-10 border-t-4 border-l-4 border-teal-500 rounded-tl-xl"></div>
+                <div class="absolute top-8 right-8 w-10 h-10 border-t-4 border-r-4 border-teal-500 rounded-tr-xl"></div>
+                <div class="absolute bottom-8 left-8 w-10 h-10 border-b-4 border-l-4 border-teal-500 rounded-bl-xl"></div>
+                <div class="absolute bottom-8 right-8 w-10 h-10 border-b-4 border-r-4 border-teal-500 rounded-br-xl"></div>
             </div>
         </div>
     </div>
+</div>
+
+<!-- ALERT BOX -->
+<div id="alert-box" class="fixed top-8 left-6 right-6 z-[7000] transition-all duration-500 translate-y-[-150%] opacity-0">
+    <div class="bg-white/90 dark:bg-slate-900/90 glass-effect p-4 rounded-3xl shadow-2xl flex items-center gap-4 border border-white/20 dark:border-slate-800">
+        <div id="alert-icon-bg" class="w-12 h-12 rounded-2xl flex items-center justify-center text-xl">✓</div>
+        <div class="flex-1">
+            <h4 id="alert-title" class="text-[10px] font-black uppercase tracking-widest dark:text-white">Notifikasi</h4>
+            <p id="alert-msg" class="text-[10px] font-bold text-slate-500 dark:text-slate-400 mt-0.5"></p>
+        </div>
+    </div>
+</div>
+
+<!-- SUCCESS MODAL -->
+<div id="modal-success-presence" class="fixed inset-0 bg-white dark:bg-slate-950 z-[8000] hidden flex-col items-center justify-center text-center p-10">
+    <div class="w-32 h-32 bg-teal-500/10 text-teal-500 rounded-[2.5rem] flex items-center justify-center text-6xl mb-8 animate-bounce">✓</div>
+    <h2 class="text-3xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">Berhasil Absen!</h2>
+    <p id="success-nurse-name" class="text-xl font-bold text-teal-600 mt-3 uppercase tracking-widest"></p>
+    <div class="mt-10 w-full max-w-xs bg-slate-50 dark:bg-slate-900 p-8 rounded-[3rem] border border-slate-100 dark:border-slate-800">
+        <p id="success-time" class="text-4xl font-black text-slate-800 dark:text-white tabular-nums tracking-tighter">00:00</p>
+        <p id="success-shift" class="text-[10px] font-bold text-slate-400 uppercase mt-2 tracking-[0.2em]">---</p>
+    </div>
+    <button onclick="location.reload()" class="mt-12 w-full max-w-xs bg-slate-900 dark:bg-teal-600 text-white py-5 rounded-[1.5rem] font-black text-xs uppercase tracking-[0.3em] active:scale-95 shadow-xl transition-all">Kembali</button>
 </div>
 
 <script>
@@ -314,349 +281,300 @@
         WEB_APP_URL: "https://script.google.com/macros/s/AKfycbw-Fl_qSNgqr9oEnn3vUmCtN4bRCZ5M7wz5YMiofUD33pN-kICuL6zubelKVcI_k2luXg/exec",
         DEFAULT_QR: "SISTEM-PRO-01",
         MONTHS: ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"],
-        GPS_RADIUS: 100
     };
 
     let state = {
         user: localStorage.getItem('nurse_session_name') || null,
-        data: { officers: [], logs: [], schedule: {}, config: { voice: true, popup: true } },
+        data: { officers: [], logs: [], schedule: {}, config: { voice: true, popup: true, gpsLock: false } },
         isWithinRadius: true,
-        distance: 0,
-        scanner: null
+        darkMode: localStorage.getItem('theme') === 'dark',
+        scanner: null,
+        audioContext: null
     };
 
-    // --- Sound & Voice Helpers ---
-    function playFeedback(msg) {
-        if (state.data.config.voice === false) return;
-        const utterance = new SpeechSynthesisUtterance(msg);
-        utterance.lang = 'id-ID';
-        utterance.rate = 1.0;
-        window.speechSynthesis.speak(utterance);
+    // --- Audio & Haptic ---
+    function initAudio() { if (!state.audioContext) state.audioContext = new (window.AudioContext || window.webkitAudioContext)(); }
+    function playSfx(type) {
+        initAudio(); const ctx = state.audioContext; const osc = ctx.createOscillator(); const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination); const now = ctx.currentTime;
+        if (type === 'ping') {
+            osc.frequency.setValueAtTime(880, now); gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+            osc.start(now); osc.stop(now + 0.2);
+        } else if (type === 'error') {
+            osc.type = 'square'; osc.frequency.setValueAtTime(220, now); gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0, now + 0.3);
+            osc.start(now); osc.stop(now + 0.3);
+        } else if (type === 'success') {
+            [523.25, 659.25, 783.99].forEach((f, i) => {
+                const o = ctx.createOscillator(); const g = ctx.createGain(); o.connect(g); g.connect(ctx.destination);
+                o.frequency.setValueAtTime(f, now + (i * 0.1)); g.gain.setValueAtTime(0.05, now + (i * 0.1)); g.gain.exponentialRampToValueAtTime(0.01, now + (i * 0.1) + 0.3);
+                o.start(now + (i * 0.1)); o.stop(now + (i * 0.1) + 0.3);
+            });
+        }
     }
+    function triggerHaptic(t = 20) { if (navigator.vibrate) navigator.vibrate(t); }
 
-    function showView(viewName) {
-        document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
-        document.getElementById(`view-${viewName}`).classList.add('active');
-        document.getElementById('nav-home').className = viewName === 'home' 
-            ? "flex-1 py-4 flex flex-col items-center gap-1 rounded-2xl transition-all text-teal-600 bg-teal-50"
-            : "flex-1 py-4 flex flex-col items-center gap-1 rounded-2xl transition-all text-slate-400";
-        if (viewName === 'rekap') renderRekap();
-        document.getElementById('scroll-root').scrollTop = 0;
-    }
-
+    // --- Core UI Functions ---
     function showAlert(title, msg, type = 'success') {
         const box = document.getElementById('alert-box');
         const iconBg = document.getElementById('alert-icon-bg');
         document.getElementById('alert-title').innerText = title;
         document.getElementById('alert-msg').innerText = msg;
-        iconBg.className = `w-12 h-12 rounded-full flex items-center justify-center text-xl ${type === 'success' ? 'bg-teal-50 text-teal-600' : 'bg-rose-50 text-rose-600'}`;
-        iconBg.innerText = type === 'success' ? '✓' : '✕';
-        box.classList.add('show');
-        setTimeout(() => box.classList.remove('show'), 4000);
+        if(type === 'success') {
+            iconBg.className = "w-12 h-12 rounded-2xl flex items-center justify-center text-xl bg-teal-500/10 text-teal-600"; iconBg.innerText = '✓';
+            playSfx('ping'); triggerHaptic(30);
+        } else {
+            iconBg.className = "w-12 h-12 rounded-2xl flex items-center justify-center text-xl bg-rose-500/10 text-rose-500"; iconBg.innerText = '✕';
+            playSfx('error'); triggerHaptic(100);
+        }
+        box.style.transform = 'translateY(0)'; box.style.opacity = '1';
+        setTimeout(() => { box.style.transform = 'translateY(-150%)'; box.style.opacity = '0'; }, 3000);
     }
 
-    function toggleLoading(show) {
-        document.getElementById('loading-screen').classList.toggle('hidden', !show);
+    function toggleSchedule(shiftId) {
+        triggerHaptic(10);
+        const cards = document.querySelectorAll('.schedule-card');
+        cards.forEach(card => {
+            if (card.dataset.id === shiftId) {
+                card.classList.toggle('open');
+            } else {
+                card.classList.remove('open');
+            }
+        });
     }
 
-    function toggleSyncStatus(show) {
-        document.getElementById('sync-status').classList.toggle('active', show);
+    function showView(v) {
+        triggerHaptic(15);
+        document.getElementById('view-home').classList.toggle('hidden', v !== 'home');
+        document.getElementById('view-rekap').classList.toggle('hidden', v !== 'rekap');
+        document.getElementById('nav-home').className = v === 'home' ? 'flex-1 py-4 flex flex-col items-center gap-1 rounded-[1.5rem] text-teal-600 bg-teal-500/10' : 'flex-1 py-4 flex flex-col items-center gap-1 rounded-[1.5rem] text-slate-400';
+        if (v === 'rekap') renderRekap();
+        document.getElementById('scroll-root').scrollTo({ top: 0, behavior: 'smooth' });
     }
 
+    function toggleDarkMode() {
+        triggerHaptic(20);
+        state.darkMode = !state.darkMode; localStorage.setItem('theme', state.darkMode ? 'dark' : 'light');
+        document.documentElement.classList.toggle('dark', state.darkMode);
+        document.getElementById('theme-icon').innerText = state.darkMode ? '☀️' : '🌙';
+    }
+
+    // --- Data Logic ---
     function getShiftInfo() {
         const hr = new Date().getHours();
-        if (hr >= 8 && hr < 14) return { label: 'Pagi', code: 'P', icon: '🌤️' };
-        if (hr >= 14 && hr < 20) return { label: 'Siang', code: 'S', icon: '☀️' };
-        return { label: 'Malam', code: 'M', icon: '🌙' };
+        if (hr >= 8 && hr < 14) return { label: 'Pagi', code: 'P' };
+        if (hr >= 14 && hr < 20) return { label: 'Siang', code: 'S' };
+        return { label: 'Malam', code: 'M' };
     }
 
-    function getLogicalDate(date = new Date()) {
-        const d = new Date(date);
-        if (d.getHours() < 8) d.setDate(d.getDate() - 1);
+    function getLogicalDate() {
+        const d = new Date(); if (d.getHours() < 8) d.setDate(d.getDate() - 1);
         return d.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\./g, '/');
     }
 
     async function fetchData(silent = false) {
-        if (!silent) toggleSyncStatus(true);
         try {
             const resp = await fetch(`${CONFIG.WEB_APP_URL}?action=getData`);
             state.data = await resp.json();
             renderDashboard();
             if (state.user) checkGPS();
-        } catch (e) {
-            if(!silent) showAlert("Error", "Gagal sinkronisasi", "error");
-        } finally {
-            toggleSyncStatus(false);
-        }
+        } catch (e) { if(!silent) showAlert("Error", "Gagal sinkron database", "error"); }
+        finally { document.getElementById('loading-overlay').classList.add('hidden'); }
     }
 
     function handleLogin() {
         const val = document.getElementById('input-user').value;
-        if (!val) return showAlert("Peringatan", "Pilih nama Anda terlebih dahulu", "error");
-        state.user = val;
-        localStorage.setItem('nurse_session_name', val);
-        playFeedback(`Selamat datang ${val}`);
-        showAlert("Berhasil", `Sesi diaktifkan untuk ${val}`);
-        renderDashboard();
+        if (!val) return showAlert("Peringatan", "Pilih nama perawat!", "error");
+        state.user = val; localStorage.setItem('nurse_session_name', val);
+        showAlert("Berhasil", `Sesi ${val} aktif`); renderDashboard();
     }
 
-    function logout() {
-        if (confirm("Akhiri sesi Anda?")) {
-            state.user = null;
-            localStorage.removeItem('nurse_session_name');
-            renderDashboard();
-        }
-    }
+    function logout() { state.user = null; localStorage.removeItem('nurse_session_name'); renderDashboard(); }
 
     function renderDashboard() {
-        const info = getShiftInfo();
-        const logicalDate = getLogicalDate();
-        document.getElementById('user-greeting').innerText = state.user ? `Halo, ${state.user}` : "Halo, Rekan Medis";
-        document.getElementById('shift-name').innerText = info.label;
-        document.getElementById('shift-icon').innerText = info.icon;
+        const info = getShiftInfo(); const logicalDate = getLogicalDate();
+        document.getElementById('user-greeting').innerText = state.user ? `Halo, ${state.user.split(' ')[0]}!` : "Halo, Perawat!";
         document.getElementById('logical-date-label').innerText = logicalDate;
         document.getElementById('card-auth').classList.toggle('hidden', !!state.user);
         document.getElementById('dashboard-content').classList.toggle('hidden', !state.user);
         
         const sel = document.getElementById('input-user');
-        const currentVal = sel.value;
-        sel.innerHTML = `<option value="">-- Pilih Nama Perawat --</option>` + state.data.officers.map(o => `<option value="${o}" ${o === currentVal ? 'selected' : ''}>${o}</option>`).join('');
+        sel.innerHTML = `<option value="">-- Pilih Akun --</option>` + state.data.officers.map(o => `<option value="${o}">${o}</option>`).join('');
         
+        // --- Render Schedule (Logika Klik Tampil) ---
         const day = parseInt(logicalDate.split('/')[0]);
         let schHtml = '';
         ['Pagi', 'Siang', 'Malam'].forEach(s => {
-            const code = s[0];
             const isCurrent = s === info.label;
             const names = state.data.officers.filter(n => {
-                const sData = state.data.schedule[n] || state.data.schedule[n.toUpperCase()];
-                return sData && (sData[day] === code || sData[String(day)] === code);
+                const sd = state.data.schedule[n] || state.data.schedule[n.toUpperCase()];
+                return sd && (sd[day] === s[0] || sd[String(day)] === s[0]);
             });
-            schHtml += `<div class="bg-white p-4 rounded-3xl border ${isCurrent ? 'border-teal-200 ring-4 ring-teal-50' : 'border-slate-100'} flex items-center justify-between">
-                    <div><p class="text-[8px] font-black uppercase tracking-widest ${isCurrent ? 'text-teal-600' : 'text-slate-400'}">Shift ${s}</p>
-                        <div class="flex flex-wrap gap-1 mt-2">${names.length ? names.map(n => `<span class="px-2 py-1 bg-slate-50 border border-slate-100 text-slate-700 rounded-lg text-[9px] font-bold">${n}</span>`).join('') : '<span class="text-[9px] text-slate-300 italic">Tidak ada jadwal</span>'}</div></div>
-                    ${isCurrent ? '<span class="w-10 h-10 bg-teal-50 rounded-full flex items-center justify-center text-teal-600">📌</span>' : ''}</div>`;
+            schHtml += `
+            <div class="schedule-card bg-white/60 dark:bg-slate-900/60 glass-effect p-5 rounded-[2rem] border ${isCurrent ? 'border-teal-500/30 ring-4 ring-teal-500/5' : 'border-white/20 dark:border-slate-800'} shadow-sm transition-all cursor-pointer" data-id="${s}" onclick="toggleSchedule('${s}')">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 ${isCurrent ? 'bg-teal-500 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'} rounded-2xl flex items-center justify-center text-sm font-black">${s[0]}</div>
+                        <div>
+                            <p class="text-[9px] font-black uppercase ${isCurrent ? 'text-teal-600 dark:text-teal-400' : 'text-slate-400'} tracking-widest">Shift ${s}</p>
+                            <p class="text-[7px] font-bold text-slate-300 uppercase">${names.length} Perawat Bertugas</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        ${isCurrent ? '<div class="w-2 h-2 rounded-full bg-teal-500 animate-pulse"></div>' : ''}
+                        <svg class="chevron w-4 h-4 text-slate-300 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"></path></svg>
+                    </div>
+                </div>
+                <div class="schedule-content">
+                    <div class="flex flex-wrap gap-2 pt-2">
+                        ${names.length ? names.map(n => `<span class="px-3 py-1.5 bg-white/80 dark:bg-slate-800/80 rounded-xl text-[9px] font-bold text-slate-600 dark:text-slate-300 border border-slate-100 dark:border-slate-700 shadow-sm">${n}</span>`).join('') : '<span class="text-[9px] text-slate-300 italic">Tidak ada petugas terdaftar</span>'}
+                    </div>
+                </div>
+            </div>`;
         });
         document.getElementById('schedule-container').innerHTML = schHtml;
 
-        const logsToday = state.data.logs
-            .filter(l => l.date === logicalDate)
-            .map(l => ({ ...l, isCurrentShift: l.shift === info.label }))
-            .sort((a, b) => (a.isCurrentShift && !b.isCurrentShift) ? -1 : (!a.isCurrentShift && b.isCurrentShift) ? 1 : 0);
-
+        // --- Render Log (Logika Status Jaga) ---
+        const logsToday = state.data.logs.filter(l => l.date === logicalDate).sort((a, b) => b.time.localeCompare(a.time));
         document.getElementById('live-log-container').innerHTML = logsToday.length ? logsToday.map(l => {
-            const statusLabel = l.isCurrentShift ? "Sedang Jaga" : "Selesai Jaga";
-            const statusBg = l.isCurrentShift ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-slate-50 text-slate-400 border-slate-100";
-            return `<div class="bg-white p-4 rounded-3xl border border-slate-100 flex items-center gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                <div class="w-12 h-12 ${l.isCurrentShift ? 'bg-teal-600' : 'bg-slate-400'} rounded-2xl flex items-center justify-center text-white font-black text-lg">${l.name ? l.name[0] : '?'}</div>
+            const isDutyNow = l.shift === info.label;
+            return `
+            <div class="bg-white/40 dark:bg-slate-900/40 glass-effect p-4 rounded-[1.5rem] border border-white/20 dark:border-slate-800 flex items-center gap-4">
+                <div class="w-10 h-10 ${isDutyNow ? 'bg-teal-500/10 text-teal-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'} rounded-xl flex items-center justify-center font-black text-xs uppercase">${l.name.charAt(0)}</div>
                 <div class="flex-1">
-                    <p class="text-[10px] font-black text-slate-800 uppercase tracking-tight">${l.name}</p>
-                    <p class="text-[8px] font-bold text-slate-400 uppercase">Imbas Pukul ${l.time} • Shift ${l.shift}</p>
+                    <p class="text-[10px] font-black text-slate-800 dark:text-slate-200 uppercase tracking-tight">${l.name}</p>
+                    <p class="text-[8px] font-bold text-slate-400 uppercase tracking-widest">${l.time} • Shift ${l.shift}</p>
                 </div>
-                <div class="${statusBg} px-3 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest border">
-                    ${statusLabel}
+                <div class="${isDutyNow ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-slate-500/10 text-slate-400 border-slate-500/20'} px-3 py-1.5 rounded-xl text-[7px] font-black uppercase tracking-widest border">
+                    ${isDutyNow ? 'Sedang Jaga' : 'Selesai Jaga'}
                 </div>
             </div>`;
-        }).join('') : `<div class="text-center py-10">
-            <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">📋</div>
-            <p class="text-[9px] font-black text-slate-300 uppercase tracking-[0.2em]">Belum ada absen scan hari ini</p>
-        </div>`;
+        }).join('') : '<div class="text-center py-10 opacity-30 text-[9px] font-black uppercase tracking-widest dark:text-white">Belum Ada Absen Masuk</div>';
     }
 
     function renderRekap() {
-        const now = new Date();
-        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        const now = new Date(); const days = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        const search = document.getElementById('rekap-search')?.value.toLowerCase() || "";
         document.getElementById('rekap-month-label').innerText = `${CONFIG.MONTHS[now.getMonth()]} ${now.getFullYear()}`;
-        let html = `<table class="rekap-table"><thead><tr><th class="sticky-left">Perawat</th>`;
-        for(let i=1; i<=daysInMonth; i++) html += `<th>${i}</th>`;
-        html += `<th>TOT</th></tr></thead><tbody>`;
-        state.data.officers.forEach(name => {
-            let total = 0; html += `<tr><td class="sticky-left uppercase font-black text-slate-700">${name}</td>`;
-            for(let d=1; d<=daysInMonth; d++) {
+        
+        let html = `<table class="rekap-table"><thead><tr class="bg-slate-50 dark:bg-slate-800"><th class="sticky-left dark:bg-slate-800">Perawat</th>`;
+        for(let i=1; i<=days; i++) html += `<th>${i}</th>`;
+        html += `<th class="sticky-right dark:bg-slate-800">TOT</th></tr></thead><tbody>`;
+        
+        state.data.officers.filter(o => o.toLowerCase().includes(search)).forEach(name => {
+            let total = 0; html += `<tr><td class="sticky-left uppercase font-black text-slate-700 dark:text-slate-300 dark:bg-slate-900">${name}</td>`;
+            for(let d=1; d<=days; d++) {
                 const log = state.data.logs.find(l => {
-                    const parts = l.date.split('/');
-                    return l.name === name && parseInt(parts[0]) === d && parseInt(parts[1]) === (now.getMonth() + 1);
+                    const p = l.date.split('/'); return l.name === name && parseInt(p[0]) === d && parseInt(p[1]) === (now.getMonth() + 1);
                 });
-                const code = log ? log.shift[0] : '';
-                if (code) total++;
-                html += `<td class="code-${code}">${code}</td>`;
+                const c = log ? log.shift[0] : ''; if (c) total++;
+                html += `<td class="${c ? 'code-'+c : 'dark:text-slate-700'}">${c || ''}</td>`;
             }
-            html += `<td class="font-black text-slate-900 bg-slate-50">${total}</td></tr>`;
+            html += `<td class="sticky-right dark:bg-slate-900 dark:text-teal-400 font-black">${total}</td></tr>`;
         });
         document.getElementById('rekap-table-container').innerHTML = html + `</tbody></table>`;
     }
 
-    function calculateDistance(lat1, lon1, lat2, lon2) {
-        const R = 6371e3;
-        const φ1 = lat1 * Math.PI/180;
-        const φ2 = lat2 * Math.PI/180;
-        const Δφ = (lat2-lat1) * Math.PI/180;
-        const Δλ = (lon2-lon1) * Math.PI/180;
-        const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
-        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    }
-
-    function checkGPS() {
-        const dot = document.getElementById('gps-status-dot');
-        const text = document.getElementById('gps-status-text');
-        const isLocked = state.data.config && state.data.config.gpsLock === true;
-        
-        if (!isLocked) {
-            dot.className = "w-2 h-2 rounded-full bg-slate-400";
-            text.innerText = "GPS STANDBY (OFF)";
-            state.isWithinRadius = true;
-            return;
-        }
-
-        if (!navigator.geolocation) { text.innerText = "GPS TIDAK DIDUKUNG"; return; }
-        navigator.geolocation.getCurrentPosition(pos => {
-            const targetLat = parseFloat(state.data.config.lat) || -2.6789;
-            const targetLng = parseFloat(state.data.config.lng) || 116.1234;
-            const allowed = parseInt(state.data.config.radius) || CONFIG.GPS_RADIUS;
-            state.distance = calculateDistance(pos.coords.latitude, pos.coords.longitude, targetLat, targetLng);
-            state.isWithinRadius = state.distance <= allowed;
-            if (state.isWithinRadius) {
-                dot.className = "w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]";
-                text.innerText = "Lokasi Valid (Puskesmas)";
-            } else {
-                dot.className = "w-2 h-2 rounded-full bg-rose-400 animate-pulse";
-                text.innerText = `${Math.round(state.distance)}m DILUAR RADIUS`;
-            }
-        }, err => { text.innerText = "GPS TERKUNCI / IZINKAN AKSES"; }, { enableHighAccuracy: true });
-    }
-
+    // --- Validations & Presence ---
     async function initiateScan() {
         if (!state.user) return showAlert("Akses Ditolak", "Identitas belum diverifikasi", "error");
         
-        // 1. Verifikasi GPS Awal
-        if (state.data.config && state.data.config.gpsLock === true) {
+        if (state.data.config.gpsLock === true) {
             checkGPS();
-            if (!state.isWithinRadius) { 
-                playFeedback("Maaf, lokasi Anda tidak valid.");
-                return showAlert("Lokasi Tidak Valid", `Anda berada ${Math.round(state.distance)}m diluar area Puskesmas.`, "error"); 
-            }
+            if (!state.isWithinRadius) return showAlert("Lokasi Gagal", "Anda harus berada di area Puskesmas", "error");
         }
 
-        // 2. Verifikasi Duplikasi (Cek apakah sudah scan shift ini hari ini)
         const logicalDate = getLogicalDate();
-        const info = getShiftInfo();
-        const isAlreadyScanned = state.data.logs.some(l => l.name === state.user && l.date === logicalDate && l.shift === info.label);
-        
-        if (isAlreadyScanned) {
-            playFeedback("Anda sudah melakukan absen untuk shift ini.");
-            return showAlert("Sudah Absen", `Anda sudah tercatat masuk untuk Shift ${info.label} hari ini.`, "error");
-        }
+        const currentShift = getShiftInfo();
+        const alreadyScanned = state.data.logs.some(l => l.name === state.user && l.date === logicalDate && l.shift === currentShift.label);
+        if (alreadyScanned) return showAlert("Sudah Absen", `Anda sudah absen Shift ${currentShift.label} hari ini.`, "error");
 
-        document.getElementById('modal-scanner').style.display = 'flex';
-        if (state.scanner) { try { await state.scanner.stop(); } catch(e) {} state.scanner = null; }
-        
+        document.getElementById('modal-scanner').classList.remove('hidden');
         state.scanner = new Html5Qrcode("qr-reader");
-        const dynamicSecret = (state.data.config && state.data.config.qrData) || CONFIG.DEFAULT_QR;
+        const secret = state.data.config.qrData || CONFIG.DEFAULT_QR;
 
         try {
-            await state.scanner.start({ facingMode: "environment" }, { fps: 20, qrbox: (w, h) => { let m = Math.min(w, h); let q = Math.floor(m * 0.7); return { width: q, height: q }; }, aspectRatio: 1.0 },
+            await state.scanner.start({ facingMode: "environment" }, { fps: 20, qrbox: 250 },
                 async (txt) => {
-                    if (txt === dynamicSecret) {
-                        // 3. Verifikasi GPS Final tepat saat scan berhasil
-                        if (state.data.config && state.data.config.gpsLock === true && !state.isWithinRadius) {
-                             playFeedback("Akses ditolak. Lokasi Anda berubah.");
-                             showAlert("Lokasi Berubah", "Lokasi tidak valid saat pemindaian.", "error");
-                             return;
-                        }
-
-                        await state.scanner.stop();
-                        state.scanner = null;
-                        closeScanner();
+                    if (txt === secret) {
+                        triggerHaptic(50); playSfx('ping');
+                        await state.scanner.stop(); state.scanner = null;
+                        document.getElementById('modal-scanner').classList.add('hidden');
                         processPresence();
                     } else {
-                        showAlert("Kode Salah", "QR Code ini bukan milik sistem presensi.", "error");
+                        showAlert("QR Tidak Sah", "Gunakan Kode QR resmi!", "error");
                     }
                 }
             );
-        } catch (e) {
-            showAlert("Kamera Gagal", "Gagal mengakses kamera. Pastikan izin telah diberikan.", "error");
-            closeScanner();
-        }
-    }
-
-    function closeScanner() {
-        const modal = document.getElementById('modal-scanner');
-        if (modal) modal.style.display = 'none';
-        if (state.scanner) { state.scanner.stop().then(() => { state.scanner = null; }).catch(() => {}); }
-    }
-
-    function showSuccessModal(name, time, shift) {
-        if (state.data.config.popup === false) return;
-        document.getElementById('success-nurse-name').innerText = name;
-        document.getElementById('success-time').innerText = time;
-        document.getElementById('success-shift').innerText = `SHIFT ${shift}`;
-        document.getElementById('modal-success-presence').style.display = 'flex';
-    }
-
-    function closeSuccessModal() {
-        document.getElementById('modal-success-presence').style.display = 'none';
+        } catch (e) { showAlert("Kamera Error", "Gagal mengakses kamera", "error"); closeScanner(); }
     }
 
     async function processPresence() {
-        toggleLoading(true);
-        const shift = getShiftInfo();
-        const now = new Date();
-        const logicalDate = getLogicalDate();
-        const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-
-        // Validasi Jadwal (Cek apakah perawat memang dijadwalkan shift ini)
-        const day = parseInt(logicalDate.split('/')[0]);
-        const sData = state.data.schedule[state.user] || state.data.schedule[state.user.toUpperCase()];
-        const scheduledShift = sData ? (sData[day] || sData[String(day)]) : null;
-        
-        let feedbackMsg = `Presensi berhasil. Selamat bertugas ${state.user}`;
-        if (scheduledShift && scheduledShift !== shift.code) {
-            feedbackMsg = `Peringatan, Anda absen di luar jadwal seharusnya. Namun data tetap disimpan. Selamat bertugas ${state.user}`;
-        }
+        document.getElementById('loading-overlay').classList.remove('hidden');
+        const shift = getShiftInfo(); const logicalDate = getLogicalDate();
+        const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
 
         try {
             const resp = await fetch(CONFIG.WEB_APP_URL, {
                 method: 'POST',
                 body: JSON.stringify({
                     action: 'saveScan',
-                    payload: {
-                        name: state.user,
-                        date: logicalDate,
-                        shift: shift.label,
-                        time: timeStr
-                    }
+                    payload: { name: state.user, date: logicalDate, shift: shift.label, time: timeStr }
                 })
             });
             const res = await resp.json();
             if (res.status === 'success') {
-                playFeedback(feedbackMsg);
-                showSuccessModal(state.user, timeStr, shift.label);
+                playSfx('success'); triggerHaptic(100);
+                document.getElementById('success-nurse-name').innerText = state.user;
+                document.getElementById('success-time').innerText = timeStr;
+                document.getElementById('success-shift').innerText = `SHIFT ${shift.label.toUpperCase()}`;
+                document.getElementById('modal-success-presence').classList.remove('hidden');
                 fetchData(true);
+            } else { showAlert("Gagal", res.message || "Gagal menyimpan data", "error"); }
+        } catch (e) { showAlert("Error", "Gagal menghubungi server", "error"); }
+        finally { document.getElementById('loading-overlay').classList.add('hidden'); }
+    }
+
+    // --- Utilities ---
+    function checkGPS() {
+        if (!state.data.config.gpsLock) { state.isWithinRadius = true; return; }
+        navigator.geolocation.getCurrentPosition(pos => {
+            const R = 6371e3; const dLat = (pos.coords.latitude - (state.data.config.lat || -2.6789)) * Math.PI/180;
+            const dLon = (pos.coords.longitude - (state.data.config.lng || 116.1234)) * Math.PI/180;
+            const a = Math.sin(dLat/2)**2 + Math.cos(pos.coords.latitude*Math.PI/180)*Math.cos((state.data.config.lat||-2.6789)*Math.PI/180)*Math.sin(dLon/2)**2;
+            const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            state.isWithinRadius = dist <= (state.data.config.radius || 100);
+            const dot = document.getElementById('gps-dot'); const text = document.getElementById('gps-text');
+            if (state.isWithinRadius) {
+                dot.className = "w-2 h-2 rounded-full bg-emerald-400"; text.innerText = "Lokasi Valid";
+            } else {
+                dot.className = "w-2 h-2 rounded-full bg-rose-400 animate-pulse"; text.innerText = `${Math.round(dist)}m Diluar Area`;
             }
-        } catch (e) {
-            showAlert("Gagal", "Gagal menyimpan data ke server", "error");
-        } finally {
-            toggleLoading(false);
-        }
+        }, null, { enableHighAccuracy: true });
     }
 
     function exportToExcel() {
         const table = document.getElementById('rekap-table-container').querySelector('table');
-        if (!table) return;
-        const wb = XLSX.utils.table_to_book(table);
-        XLSX.writeFile(wb, `Rekap_Presensi_Perawat_${CONFIG.MONTHS[new Date().getMonth()]}.xlsx`);
+        if (!table) return showAlert("Gagal", "Data kosong", "error");
+        const wb = XLSX.utils.table_to_book(table, { sheet: "Rekap" });
+        const ws = wb.Sheets["Rekap"];
+        const cw = [{ wch: 25 }]; for (let i=0; i<31; i++) cw.push({ wch: 4 }); cw.push({ wch: 8 });
+        ws['!cols'] = cw;
+        XLSX.writeFile(wb, `Rekap_Presensi_Perawat.xlsx`);
     }
 
-    function handleDevFeatures() { showAlert("Pengembangan", "Fitur Koordinasi Chat sedang dalam tahap integrasi."); }
+    function closeScanner() { document.getElementById('modal-scanner').classList.add('hidden'); if(state.scanner) state.scanner.stop(); }
+    function handleDevFeatures() { showAlert("Info", "Gunakan QR Code resmi Puskesmas."); }
 
     window.onload = () => {
-        fetchData(true);
+        if(state.darkMode) document.documentElement.classList.add('dark');
+        fetchData();
         setInterval(() => {
             const now = new Date();
             document.getElementById('time-display').innerText = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             document.getElementById('date-display').innerText = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });
         }, 1000);
         setInterval(() => fetchData(true), 60000);
-        setInterval(() => { checkGPS(); }, 15000);
+        setInterval(() => checkGPS(), 20000);
     };
 </script>
 </body>
